@@ -45,7 +45,7 @@ Xenith/
 I would probably update this structure as I dive into this project. But yh, this is a general overview.
 ---
 
-## 2️⃣ Mapping Python Modules to Rust
+## Mapping Python Modules to Rust
 
 | Python Module            | Rust Equivalent                             |
 | ------------------------ | ------------------------------------------- |
