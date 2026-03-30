@@ -1,4 +1,5 @@
 use core::num;
+use std::collections::HashMap;
 
 use crate::error::{ExpectedCharError, IllegalCharError};
 use crate::position::Position;
@@ -335,7 +336,51 @@ impl Lexer {
     }
 
     pub fn make_string(&mut self) -> Token {
-        todo!()
+        let mut string_value = String::new();
+        let position_start = self.position.copy();
+
+        // Flag to track if the next character is escaped
+        let mut escape_character = false;
+
+        // Skip the opening quote
+        self.advance();
+
+        // Map of escape sequences
+        let escape_characters: HashMap<char, char> = HashMap::from([('n', '\n'), ('t', '\t')]);
+
+        while let Some(c) = self.current_character {
+            if c == '"' && !escape_character {
+                // Closing quote found, stop parsing
+                break;
+            }
+
+            if escape_character {
+                // If previous char was a backslash, interpret escape
+                let escaped = escape_characters.get(&c).copied().unwrap_or(c);
+                string_value.push(escaped);
+                escape_character = false; // reset the flag
+            } else {
+                if c == '\\' {
+                    escape_character = true; // next char is escaped
+                } else {
+                    string_value.push(c);
+                }
+            }
+
+            self.advance();
+        }
+
+        // handle unterminated string; raise an error
+        if self.current_character == Some('"') {
+            self.advance(); // Skip the closing quote
+        }
+
+        Token::new(
+            TokenType::String,
+            Some(string_value),
+            Some(position_start),
+            Some(self.position.clone()),
+        )
     }
 
     pub fn make_equals(&mut self) -> Token {
