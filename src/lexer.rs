@@ -282,8 +282,10 @@ impl Lexer {
     }
 
     pub fn peek(&mut self) -> Option<char> {
-        if self.position.index + 1 < self.text.len() {
-            self.text.chars().nth(self.position.index + 1)
+        let peek_index = self.position.index + 1;
+
+        if peek_index < self.text.len() {
+            self.text.chars().nth(peek_index)
         } else {
             None
         }
