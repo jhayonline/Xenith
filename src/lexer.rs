@@ -1,4 +1,3 @@
-use core::num;
 use std::collections::HashMap;
 
 use crate::error::{ExpectedCharError, IllegalCharError};
@@ -202,7 +201,11 @@ impl Lexer {
                     }
                     '!' if self.peek() == Some('=') => {
                         let token = self.make_not_equals();
-                        tokens.push(token);
+
+                        match token {
+                            Ok(value) => tokens.push(value),
+                            Err(error) => println!("Error: {:?}", error),
+                        }
 
                         self.advance();
                     }
@@ -384,19 +387,114 @@ impl Lexer {
     }
 
     pub fn make_equals(&mut self) -> Token {
-        todo!()
+        let mut token_type = TokenType::Eq;
+        let position_start = self.position.copy();
+
+        self.advance();
+
+        if let Some(c) = self.current_character {
+            if c == '=' {
+                self.advance();
+                token_type = TokenType::Ee;
+            }
+        }
+
+        Token::new(
+            token_type,
+            None,
+            Some(position_start),
+            Some(self.position.clone()),
+        )
     }
 
-    pub fn make_not_equals(&mut self) -> Token {
-        todo!()
+    pub fn make_not_equals(&mut self) -> Result<Token, ExpectedCharError> {
+        let position_start = self.position.copy();
+        self.advance();
+
+        if let Some(c) = self.current_character {
+            if c == '=' {
+                self.advance();
+
+                let new_token = Token::new(
+                    TokenType::Ne,
+                    None,
+                    Some(position_start),
+                    Some(self.position.copy()),
+                );
+
+                return Ok(new_token);
+            }
+        }
+
+        self.advance();
+
+        let err_value =
+            ExpectedCharError::new(position_start, self.position.clone(), "'=' (after '!')");
+
+        Err(err_value)
     }
 
     pub fn make_less_than(&mut self) -> Token {
-        todo!()
+        let mut token_type = TokenType::Lt;
+        let position_start = self.position.copy();
+
+        self.advance();
+
+        if let Some(c) = self.current_character {
+            if c == '=' {
+                self.advance();
+                token_type = TokenType::Lte;
+            }
+        }
+
+        Token::new(
+            token_type,
+            None,
+            Some(position_start),
+            Some(self.position.clone()),
+        )
     }
 
     pub fn make_greater_than(&mut self) -> Token {
-        todo!()
+        let mut token_type = TokenType::Gt;
+        let position_start = self.position.copy();
+
+        self.advance();
+
+        if let Some(c) = self.current_character {
+            if c == '=' {
+                self.advance();
+                token_type = TokenType::Gte;
+            }
+        }
+
+        Token::new(
+            token_type,
+            None,
+            Some(position_start),
+            Some(self.position.clone()),
+        )
+    }
+
+    pub fn make_minus_or_arrow(&mut self) -> Token {
+        let mut token_type = TokenType::Minus;
+        let position_start = self.position.copy();
+
+        self.advance();
+
+        if let Some(c) = self.current_character {
+            if c == '>' {
+                self.advance();
+                token_type = TokenType::Arrow;
+            }
+        }
+
+        Token::new(
+            token_type,
+            None,
+            Some(position_start),
+            Some(self.position.clone()),
+        )
     }
 }
 
