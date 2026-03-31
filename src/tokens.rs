@@ -40,36 +40,32 @@ pub enum TokenType {
 pub struct Token {
     pub kind: TokenType,
     pub value: Option<String>,
-    pub position_start: Option<Position>,
-    pub position_end: Option<Position>,
+    pub position_start: Position,
+    pub position_end: Position,
 }
 
 impl Token {
     pub fn new(
         kind: TokenType,
         value: Option<String>,
-        position_start: Option<Position>,
+        position_start: Position,
         position_end: Option<Position>,
     ) -> Self {
-        let pos_start_copy = position_start.clone();
-        let pos_end_copy = if let Some(pos_end) = position_end.clone() {
-            Some(pos_end)
-        } else if let Some(pos_start) = position_start.clone() {
-            let mut copy = pos_start.clone();
-            copy.advance(None);
-            Some(copy)
+        let pos_end = if let Some(end) = position_end {
+            end
         } else {
-            None
+            let mut copy = position_start.clone();
+            copy.advance(None);
+            copy
         };
 
         Self {
             kind,
             value,
-            position_start: pos_start_copy,
-            position_end: pos_end_copy,
+            position_start,
+            position_end: pos_end,
         }
     }
-
     pub fn matches(&self, kind: TokenType, value: Option<&str>) -> bool {
         self.kind == kind && self.value.as_deref() == value
     }
