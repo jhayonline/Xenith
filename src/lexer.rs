@@ -69,7 +69,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Newline,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -83,7 +83,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Plus,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -93,7 +93,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Minus,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -103,7 +103,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Div,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -113,7 +113,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Pow,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -123,7 +123,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::LParen,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -133,7 +133,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::RParen,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -143,7 +143,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::LSquare,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -153,7 +153,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::RSquare,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -163,7 +163,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::LBrace,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -173,7 +173,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::RBrace,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -183,7 +183,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Question,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -193,7 +193,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Colon,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -213,7 +213,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Keyword,
                             Some("!".to_string()),
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -228,7 +228,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Keyword,
                             Some("&&".to_string()),
-                            Some(position_start.clone()),
+                            position_start.clone(),
                             Some(self.position.clone()),
                         ));
                     }
@@ -241,12 +241,9 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Keyword,
                             Some("||".to_string()),
-                            Some(position_start.clone()),
+                            position_start.clone(),
                             Some(self.position.clone()),
                         ));
-
-                        self.advance();
-                        self.advance();
                     }
                     '=' => tokens.push(self.make_equals()),
                     '<' => tokens.push(self.make_less_than()),
@@ -255,7 +252,7 @@ impl Lexer {
                         tokens.push(Token::new(
                             TokenType::Comma,
                             None,
-                            Some(self.position.clone()),
+                            self.position.clone(),
                             None,
                         ));
 
@@ -280,7 +277,7 @@ impl Lexer {
         tokens.push(Token::new(
             TokenType::Eof,
             None,
-            Some(self.position.clone()),
+            self.position.clone(),
             None,
         ));
 
@@ -321,7 +318,7 @@ impl Lexer {
             return Token::new(
                 TokenType::Int,
                 Some(number_string),
-                Some(position_start),
+                position_start,
                 Some(self.position.clone()),
             );
         }
@@ -329,7 +326,7 @@ impl Lexer {
         Token::new(
             TokenType::Float,
             Some(number_string),
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
@@ -381,7 +378,7 @@ impl Lexer {
         Token::new(
             TokenType::String,
             Some(string_value),
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
@@ -402,7 +399,7 @@ impl Lexer {
         Token::new(
             token_type,
             None,
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
@@ -418,7 +415,7 @@ impl Lexer {
                 let new_token = Token::new(
                     TokenType::Ne,
                     None,
-                    Some(position_start),
+                    position_start,
                     Some(self.position.copy()),
                 );
 
@@ -450,7 +447,7 @@ impl Lexer {
         Token::new(
             token_type,
             None,
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
@@ -471,7 +468,7 @@ impl Lexer {
         Token::new(
             token_type,
             None,
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
@@ -492,7 +489,7 @@ impl Lexer {
         Token::new(
             token_type,
             None,
-            Some(position_start),
+            position_start,
             Some(self.position.clone()),
         )
     }
