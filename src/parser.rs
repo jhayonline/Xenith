@@ -340,7 +340,45 @@ impl Parser {
     }
 
     fn comp_expr(&mut self) -> ParseResult {
-        self.arith_expr()
+        let mut result = ParseResult::new();
+
+        let left = result.register(&self.arith_expr());
+        if result.error.is_some() {
+            return result;
+        }
+        let mut left = left.unwrap();
+
+        while let Some(tok) = self.current_token().cloned() {
+            let op_type = tok.kind.clone();
+
+            // Check for comparison operators
+            let is_comparison = matches!(
+                op_type,
+                TokenType::Ee
+                    | TokenType::Ne
+                    | TokenType::Lt
+                    | TokenType::Gt
+                    | TokenType::Lte
+                    | TokenType::Gte
+            );
+
+            if !is_comparison {
+                break;
+            }
+
+            let op = tok.clone();
+            self.advance();
+
+            let right = result.register(&self.arith_expr());
+            if result.error.is_some() {
+                return result;
+            }
+            let right = right.unwrap();
+
+            left = Node::bin_op(left, op, right);
+        }
+
+        result.success(left)
     }
 
     fn arith_expr(&mut self) -> ParseResult {
