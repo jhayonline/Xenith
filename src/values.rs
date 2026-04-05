@@ -920,12 +920,31 @@ impl Map {
         self.pairs.contains_key(key)
     }
 
-    pub fn keys(&self) -> Vec<String> {
-        self.pairs.keys().cloned().collect()
+    pub fn items(&self) -> List {
+        let mut items = Vec::new();
+        for (key, value) in &self.pairs {
+            items.push(Value::List(List::new(vec![
+                Value::String(XenithString::new(key.clone())),
+                value.clone(),
+            ])));
+        }
+        List::new(items)
     }
 
-    pub fn values(&self) -> Vec<Value> {
-        self.pairs.values().cloned().collect()
+    pub fn keys(&self) -> List {
+        let mut keys = Vec::new();
+        for key in self.pairs.keys() {
+            keys.push(Value::String(XenithString::new(key.clone())));
+        }
+        List::new(keys)
+    }
+
+    pub fn values(&self) -> List {
+        let mut values = Vec::new();
+        for value in self.pairs.values() {
+            values.push(value.clone());
+        }
+        List::new(values)
     }
 }
 

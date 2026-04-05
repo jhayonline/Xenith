@@ -1628,43 +1628,101 @@ impl Parser {
                     });
                     self.advance();
 
-                    // Check for dot access (e.g., user.name)
-                    // Clone the current token before checking to avoid borrowing issues
+                    // Check for dot access (e.g., user.name or user.keys())
                     if let Some(dot) = self.current_token().cloned() {
                         if dot.kind == TokenType::Dot {
                             self.advance(); // consume '.'
+
+                            // Check what comes after the dot
                             if let Some(prop) = self.current_token().cloned() {
                                 if prop.kind == TokenType::Identifier {
                                     let prop_name = prop.value.clone().unwrap();
                                     self.advance();
 
-                                    // Create a map access: user["name"]
-                                    let key_node = Node::String(StringNode::new(Token::new(
-                                        TokenType::String,
-                                        Some(prop_name),
-                                        prop.position_start.clone(),
-                                        Some(prop.position_end.clone()),
-                                    )));
+                                    // Check if this is a method call (followed by '(')
+                                    if let Some(lparen) = self.current_token().cloned() {
+                                        if lparen.kind == TokenType::LParen {
+                                            // This is a method call - let the call method handle it
+                                            // Create a method access node and return it
+                                            let method_token = Token::new(
+                                                TokenType::Identifier,
+                                                Some(prop_name),
+                                                prop.position_start.clone(),
+                                                Some(prop.position_end.clone()),
+                                            );
 
-                                    let index_token = Token::new(
-                                        TokenType::Index,
-                                        None,
-                                        dot.position_start.clone(),
-                                        Some(prop.position_end.clone()),
-                                    );
+                                            // Clone node before moving it into the Box
+                                            let node_clone = node.clone();
+                                            let method_access =
+                                                Node::MethodAccess(MethodAccessNode {
+                                                    object: Box::new(node_clone),
+                                                    method_name: method_token,
+                                                    position_start: node.position_start().clone(),
+                                                    position_end: prop.position_end.clone(),
+                                                });
 
-                                    // Clone node before moving it into the Box
-                                    let node_clone = node.clone();
-                                    let access_node =
-                                        Node::BinaryOperator(Box::new(BinaryOperatorNode {
-                                            left_node: Box::new(node_clone),
-                                            operator_token: index_token,
-                                            right_node: Box::new(key_node),
-                                            position_start: node.position_start().clone(),
-                                            position_end: prop.position_end.clone(),
-                                        }));
+                                            // Return the method access node (will be handled by call)
+                                            return result.success(method_access);
+                                        } else {
+                                            // This is property access (map key lookup)
+                                            let key_node =
+                                                Node::String(StringNode::new(Token::new(
+                                                    TokenType::String,
+                                                    Some(prop_name),
+                                                    prop.position_start.clone(),
+                                                    Some(prop.position_end.clone()),
+                                                )));
 
-                                    return self.parse_indexing(access_node, result);
+                                            let index_token = Token::new(
+                                                TokenType::Index,
+                                                None,
+                                                dot.position_start.clone(),
+                                                Some(prop.position_end.clone()),
+                                            );
+
+                                            // Clone node before moving it into the Box
+                                            let node_clone = node.clone();
+                                            let access_node = Node::BinaryOperator(Box::new(
+                                                BinaryOperatorNode {
+                                                    left_node: Box::new(node_clone),
+                                                    operator_token: index_token,
+                                                    right_node: Box::new(key_node),
+                                                    position_start: node.position_start().clone(),
+                                                    position_end: prop.position_end.clone(),
+                                                },
+                                            ));
+
+                                            return self.parse_indexing(access_node, result);
+                                        }
+                                    } else {
+                                        // Property access without parentheses
+                                        let key_node = Node::String(StringNode::new(Token::new(
+                                            TokenType::String,
+                                            Some(prop_name),
+                                            prop.position_start.clone(),
+                                            Some(prop.position_end.clone()),
+                                        )));
+
+                                        let index_token = Token::new(
+                                            TokenType::Index,
+                                            None,
+                                            dot.position_start.clone(),
+                                            Some(prop.position_end.clone()),
+                                        );
+
+                                        // Clone node before moving it into the Box
+                                        let node_clone = node.clone();
+                                        let access_node =
+                                            Node::BinaryOperator(Box::new(BinaryOperatorNode {
+                                                left_node: Box::new(node_clone),
+                                                operator_token: index_token,
+                                                right_node: Box::new(key_node),
+                                                position_start: node.position_start().clone(),
+                                                position_end: prop.position_end.clone(),
+                                            }));
+
+                                        return self.parse_indexing(access_node, result);
+                                    }
                                 }
                             }
                         }
@@ -2055,14 +2113,137 @@ impl Parser {
         };
         self.advance();
 
-        let var_name = match self.current_token() {
-            Some(t) if t.kind == TokenType::Identifier => t.clone(),
+        // Parse the variable name(s) - could be a single variable or (key, value) tuple
+        let var_name_token = match self.current_token() {
+            Some(t) if t.kind == TokenType::Identifier => {
+                // Check if this is a tuple pattern (key, value) without parentheses
+                let first = t.clone();
+                self.advance();
+
+                // Look ahead to see if there's a comma
+                if let Some(comma) = self.current_token() {
+                    if comma.kind == TokenType::Comma {
+                        self.advance(); // consume ','
+
+                        let second = match self.current_token() {
+                            Some(tok) if tok.kind == TokenType::Identifier => tok.clone(),
+                            _ => {
+                                return result.failure(
+                                    InvalidSyntaxError::new(
+                                        Self::dummy_pos(),
+                                        Self::dummy_pos(),
+                                        "Expected identifier after comma",
+                                    )
+                                    .base,
+                                );
+                            }
+                        };
+                        self.advance();
+
+                        // Create a special token that encodes the tuple pattern
+                        let tuple_name = format!(
+                            "({},{})",
+                            first.value.as_ref().unwrap(),
+                            second.value.as_ref().unwrap()
+                        );
+                        Token::new(
+                            TokenType::Identifier,
+                            Some(tuple_name),
+                            first.position_start.clone(),
+                            Some(second.position_end.clone()),
+                        )
+                    } else {
+                        // Single variable
+                        first
+                    }
+                } else {
+                    first
+                }
+            }
+            Some(t) if t.kind == TokenType::LParen => {
+                // Tuple pattern with parentheses (key, value)
+                self.advance(); // consume '('
+                let first = match self.current_token() {
+                    Some(t) if t.kind == TokenType::Identifier => t.clone(),
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected identifier in tuple pattern",
+                            )
+                            .base,
+                        );
+                    }
+                };
+                self.advance();
+
+                match self.current_token() {
+                    Some(t) if t.kind == TokenType::Comma => {
+                        self.advance();
+                    }
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected ',' in tuple pattern",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                let second = match self.current_token() {
+                    Some(t) if t.kind == TokenType::Identifier => t.clone(),
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected identifier in tuple pattern",
+                            )
+                            .base,
+                        );
+                    }
+                };
+                self.advance();
+
+                match self.current_token() {
+                    Some(t) if t.kind == TokenType::RParen => {
+                        self.advance();
+                    }
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected ')' in tuple pattern",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                // Create a special token that encodes the tuple pattern
+                let tuple_name = format!(
+                    "({},{})",
+                    first.value.as_ref().unwrap(),
+                    second.value.as_ref().unwrap()
+                );
+                Token::new(
+                    TokenType::Identifier,
+                    Some(tuple_name),
+                    first.position_start.clone(),
+                    Some(second.position_end.clone()),
+                )
+            }
             Some(t) => {
                 return result.failure(
                     InvalidSyntaxError::new(
                         t.position_start.clone(),
                         t.position_end.clone(),
-                        "Expected identifier",
+                        "Expected identifier or tuple pattern",
                     )
                     .base,
                 );
@@ -2072,14 +2253,76 @@ impl Parser {
                     InvalidSyntaxError::new(
                         Self::dummy_pos(),
                         Self::dummy_pos(),
-                        "Expected identifier",
+                        "Expected identifier or tuple pattern",
                     )
                     .base,
                 );
             }
         };
-        self.advance();
 
+        // Check if this is a collection iteration (using 'in') or range iteration (using '=')
+        let is_collection_iteration = if let Some(tok) = self.current_token() {
+            tok.value.as_deref() == Some("in")
+        } else {
+            false
+        };
+
+        if is_collection_iteration {
+            // Collection iteration: for item in collection { ... }
+            self.advance(); // consume 'in'
+
+            let collection_expr = result.register(&self.expr());
+            if result.error.is_some() {
+                return result;
+            }
+
+            let body = if let Some(t) = self.current_token() {
+                if t.kind == TokenType::LBrace {
+                    result.register(&self.block())
+                } else {
+                    result.register(&self.statement())
+                }
+            } else {
+                result.register(&self.statement())
+            };
+
+            if result.error.is_some() {
+                return result;
+            }
+
+            let (collection, body_node) = match (collection_expr, body) {
+                (Some(c), Some(b)) => (c, b),
+                _ => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "Invalid collection iteration",
+                        )
+                        .base,
+                    );
+                }
+            };
+
+            let pos_end = body_node.position_end().clone();
+            return result.success(Node::For(Box::new(ForNode {
+                variable_name_token: var_name_token,
+                start_value_node: Box::new(collection),
+                end_value_node: Box::new(Node::Number(NumberNode::new(Token::new(
+                    TokenType::Int,
+                    Some("0".to_string()),
+                    pos_start.clone(),
+                    None,
+                )))),
+                step_value_node: None,
+                body_node: Box::new(body_node),
+                should_return_null: false,
+                position_start: pos_start,
+                position_end: pos_end,
+            })));
+        }
+
+        // Range iteration: for i = 0 to 5 step 2 { ... }
         match self.current_token() {
             Some(t) if t.kind == TokenType::Eq => {
                 self.advance();
@@ -2163,7 +2406,7 @@ impl Parser {
         if let (Some(start), Some(end), Some(body_node)) = (start_value, end_value, body) {
             let pos_end = body_node.position_end().clone();
             result.success(Node::For(Box::new(ForNode {
-                variable_name_token: var_name,
+                variable_name_token: var_name_token,
                 start_value_node: Box::new(start),
                 end_value_node: Box::new(end),
                 step_value_node: step_value,

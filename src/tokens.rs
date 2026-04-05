@@ -111,4 +111,5 @@ pub const KEYWORDS: &[&str] = &[
     "skip",
     "stop",
     "match",
+    "in",
 ];

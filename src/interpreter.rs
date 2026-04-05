@@ -581,56 +581,209 @@ impl Interpreter {
         let mut result = RuntimeResult::new();
         let mut elements = Vec::new();
 
-        let start = result.register(self.visit(&node.start_value_node, context));
-        if result.should_return() {
-            return result;
-        }
-
-        let end = result.register(self.visit(&node.end_value_node, context));
-        if result.should_return() {
-            return result;
-        }
-
-        let step = if let Some(step_node) = &node.step_value_node {
-            result.register(self.visit(step_node, context))
-        } else {
-            Value::Number(Number::new(1.0))
-        };
-
-        let start_val = start.as_number().unwrap().value;
-        let end_val = end.as_number().unwrap().value;
-        let step_val = step.as_number().unwrap().value;
-
+        // Parse the variable name to see if it's a tuple pattern (key, value)
         let var_name = node.variable_name_token.value.as_ref().unwrap();
 
-        let mut i = start_val;
-        while if step_val >= 0.0 {
-            i < end_val
-        } else {
-            i > end_val
-        } {
-            context
-                .symbol_table
-                .set(var_name.clone(), Value::Number(Number::new(i)));
+        // Evaluate the iterable
+        let iterable = result.register(self.visit(&node.start_value_node, context));
+        if result.should_return() {
+            return result;
+        }
 
-            let value = result.register(self.visit(&node.body_node, context));
-            if result.should_return() && !result.loop_should_continue && !result.loop_should_break {
-                return result;
+        // Handle collection iteration (List or Map)
+        match &iterable {
+            Value::List(list) => {
+                // Iterate over list elements
+                for item in &list.elements {
+                    context.symbol_table.set(var_name.to_string(), item.clone());
+
+                    let value = result.register(self.visit(&node.body_node, context));
+                    if result.should_return()
+                        && !result.loop_should_continue
+                        && !result.loop_should_break
+                    {
+                        return result;
+                    }
+
+                    if result.loop_should_continue {
+                        result.loop_should_continue = false;
+                        continue;
+                    }
+
+                    if result.loop_should_break {
+                        result.loop_should_break = false;
+                        break;
+                    }
+
+                    elements.push(value);
+                }
             }
+            Value::Map(map) => {
+                // Check if var_name is a tuple pattern like "(key, value)"
+                if var_name.contains(',') {
+                    // This is a tuple pattern - iterate over map items
+                    let items = map.items();
+                    for item in items.elements {
+                        if let Value::List(pair) = item {
+                            if pair.elements.len() == 2 {
+                                let key = &pair.elements[0];
+                                let value = &pair.elements[1];
 
-            if result.loop_should_continue {
-                result.loop_should_continue = false;
-                i += step_val;
-                continue;
+                                // Parse variable names (e.g., "key, value")
+                                let parts: Vec<&str> =
+                                    var_name.split(',').map(|s| s.trim()).collect();
+                                if parts.len() == 2 {
+                                    context.symbol_table.set(parts[0].to_string(), key.clone());
+                                    context
+                                        .symbol_table
+                                        .set(parts[1].to_string(), value.clone());
+                                }
+                            }
+                        }
+
+                        let value = result.register(self.visit(&node.body_node, context));
+                        if result.should_return()
+                            && !result.loop_should_continue
+                            && !result.loop_should_break
+                        {
+                            return result;
+                        }
+
+                        if result.loop_should_continue {
+                            result.loop_should_continue = false;
+                            continue;
+                        }
+
+                        if result.loop_should_break {
+                            result.loop_should_break = false;
+                            break;
+                        }
+
+                        elements.push(value);
+                    }
+                } else {
+                    // Iterate over keys
+                    let keys = map.keys();
+                    for key in keys.elements {
+                        context.symbol_table.set(var_name.to_string(), key.clone());
+
+                        let value = result.register(self.visit(&node.body_node, context));
+                        if result.should_return()
+                            && !result.loop_should_continue
+                            && !result.loop_should_break
+                        {
+                            return result;
+                        }
+
+                        if result.loop_should_continue {
+                            result.loop_should_continue = false;
+                            continue;
+                        }
+
+                        if result.loop_should_break {
+                            result.loop_should_break = false;
+                            break;
+                        }
+
+                        elements.push(value);
+                    }
+                }
             }
+            _ => {
+                // Regular numeric for loop
+                let start = iterable;
+                let end = result.register(self.visit(&node.end_value_node, context));
+                if result.should_return() {
+                    return result;
+                }
 
-            if result.loop_should_break {
-                result.loop_should_break = false;
-                break;
+                let step = if let Some(step_node) = &node.step_value_node {
+                    result.register(self.visit(step_node, context))
+                } else {
+                    Value::Number(Number::new(1.0))
+                };
+
+                // Get start value
+                let start_val = match start.as_number() {
+                    Some(n) => n.value,
+                    None => {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                "For loop start must be a number",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                };
+
+                // Get end value
+                let end_val = match end.as_number() {
+                    Some(n) => n.value,
+                    None => {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                "For loop end must be a number",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                };
+
+                // Get step value
+                let step_val = match step.as_number() {
+                    Some(n) => n.value,
+                    None => {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                "For loop step must be a number",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                };
+
+                let mut i = start_val;
+                while if step_val >= 0.0 {
+                    i < end_val
+                } else {
+                    i > end_val
+                } {
+                    context
+                        .symbol_table
+                        .set(var_name.to_string(), Value::Number(Number::new(i)));
+
+                    let value = result.register(self.visit(&node.body_node, context));
+                    if result.should_return()
+                        && !result.loop_should_continue
+                        && !result.loop_should_break
+                    {
+                        return result;
+                    }
+
+                    if result.loop_should_continue {
+                        result.loop_should_continue = false;
+                        i += step_val;
+                        continue;
+                    }
+
+                    if result.loop_should_break {
+                        result.loop_should_break = false;
+                        break;
+                    }
+
+                    elements.push(value);
+                    i += step_val;
+                }
             }
-
-            elements.push(value);
-            i += step_val;
         }
 
         if node.should_return_null {
@@ -879,6 +1032,45 @@ impl Interpreter {
             }
             (Value::List(list), "len") => {
                 RuntimeResult::new().success(Value::Number(Number::new(list.len() as f64)))
+            }
+            (Value::Map(map), "items") => RuntimeResult::new().success(Value::List(map.items())),
+            (Value::Map(map), "keys") => RuntimeResult::new().success(Value::List(map.keys())),
+            (Value::Map(map), "values") => RuntimeResult::new().success(Value::List(map.values())),
+            (Value::Map(map), "len") => {
+                RuntimeResult::new().success(Value::Number(Number::new(map.len() as f64)))
+            }
+            (Value::Map(map), "has_key") => {
+                if args.len() != 1 {
+                    return RuntimeResult::new().failure(
+                        RuntimeError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "has_key expects 1 argument",
+                            Some(context.clone()),
+                        )
+                        .base,
+                    );
+                }
+                let key = match &args[0] {
+                    Value::String(s) => &s.value,
+                    _ => {
+                        return RuntimeResult::new().failure(
+                            RuntimeError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "has_key expects a string key",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                };
+                let result = map.contains_key(key);
+                RuntimeResult::new().success(Value::Number(Number::new(if result {
+                    1.0
+                } else {
+                    0.0
+                })))
             }
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(

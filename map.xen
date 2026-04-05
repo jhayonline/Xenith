@@ -1,7 +1,26 @@
 spawn user = {
     "name": "Alice",
     "age": 25,
-    "is_active": 1
+    "city": "New York"
 }
 
-echo("Name: {user.name}, Age: {user.age}")
+# Iterate over keys
+echo("Keys:")
+for key in user.keys() {
+    echo("  {key}")
+}
+
+# Iterate over values
+echo("Values:")
+for value in user.values() {
+    echo("  {value}")
+}
+
+# Iterate over key-value pairs
+echo("All entries:")
+for key, value in user.items() {
+    echo("  {key}: {value}")
+}
+
+# Get map length
+echo("Map has {user.len()} entries")
