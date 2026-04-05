@@ -27,6 +27,7 @@ pub enum Node {
     Return(Box<ReturnNode>),
     Continue(ContinueNode),
     Break(BreakNode),
+    InterpolatedString(InterpolatedStringNode),
 }
 
 impl Node {
@@ -48,6 +49,7 @@ impl Node {
             Node::Return(n) => &n.position_start,
             Node::Continue(n) => &n.position_start,
             Node::Break(n) => &n.position_start,
+            Node::InterpolatedString(n) => &n.position_start,
         }
     }
 
@@ -69,6 +71,7 @@ impl Node {
             Node::Return(n) => &n.position_end,
             Node::Continue(n) => &n.position_end,
             Node::Break(n) => &n.position_end,
+            Node::InterpolatedString(n) => &n.position_end,
         }
     }
 
@@ -246,4 +249,42 @@ pub struct ContinueNode {
 pub struct BreakNode {
     pub position_start: Position,
     pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct InterpolatedStringNode {
+    pub parts: Vec<InterpolationPart>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct InterpolationPart {
+    pub is_expression: bool,
+    pub content: String, // If text: the literal text, if expression: the expression source
+}
+
+impl InterpolatedStringNode {
+    pub fn new(token: Token) -> Self {
+        // Parse the encoded string
+        let mut parts = Vec::new();
+        if let Some(encoded) = token.value {
+            let content = encoded.trim_start_matches("__INTERPOLATED__");
+            for part in content.split('|').skip(1) {
+                let mut split = part.splitn(2, ':');
+                if let (Some(part_type), Some(content)) = (split.next(), split.next()) {
+                    parts.push(InterpolationPart {
+                        is_expression: part_type == "expr",
+                        content: content.to_string(),
+                    });
+                }
+            }
+        }
+
+        Self {
+            parts,
+            position_start: token.position_start.clone(),
+            position_end: token.position_end.clone(),
+        }
+    }
 }

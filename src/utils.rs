@@ -104,12 +104,47 @@ pub fn value_to_string(value: &Value) -> String {
         Value::Number(n) => n.value.to_string(),
         Value::String(s) => s.value.clone(),
         Value::List(l) => {
+            // If the list has only one element, don't add brackets
+            if l.elements.len() == 1 {
+                value_to_string(&l.elements[0])
+            } else {
+                let mut result = String::from("[");
+                for (i, elem) in l.elements.iter().enumerate() {
+                    if i > 0 {
+                        result.push_str(", ");
+                    }
+                    result.push_str(&value_to_string(elem));
+                }
+                result.push(']');
+                result
+            }
+        }
+        Value::Function(f) => {
+            if let Some(name) = &f.name {
+                format!("<function {}>", name)
+            } else {
+                "<anonymous function>".to_string()
+            }
+        }
+        Value::BuiltInFunction(b) => {
+            format!("<built-in function {}>", b.name)
+        }
+    }
+}
+
+/// Converts a Value to its string representation for interpolation
+pub fn value_to_interpolated_string(value: &Value) -> String {
+    match value {
+        Value::Number(n) => n.value.to_string(),
+        Value::String(s) => s.value.clone(),
+        Value::List(l) => {
+            // For interpolation, we want to show lists without extra formatting
             let mut result = String::from("[");
             for (i, elem) in l.elements.iter().enumerate() {
                 if i > 0 {
                     result.push_str(", ");
                 }
-                result.push_str(&value_to_string(elem));
+                result.push_str(&value_to_interpolated_string(elem)); // Use interpolated version recursively
             }
             result.push(']');
             result

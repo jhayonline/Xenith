@@ -15,6 +15,7 @@ pub enum TokenType {
     String,
     Identifier,
     Keyword,
+    InterpolatedString,
 
     // Operators
     Plus,

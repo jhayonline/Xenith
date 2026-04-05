@@ -373,16 +373,71 @@ impl Lexer {
     /// Creates a string token with escape sequence handling
     pub fn make_string(&mut self) -> Token {
         let mut string_val = String::new();
+        let mut interpolation_parts = Vec::new();
         let pos_start = self.position.copy();
         let mut escape_char = false;
+        let mut is_interpolated = false;
 
         self.advance(); // Skip opening quote
 
-        let escape_map: HashMap<char, char> = HashMap::from([('n', '\n'), ('t', '\t')]);
+        let escape_map: HashMap<char, char> =
+            HashMap::from([('n', '\n'), ('t', '\t'), ('{', '{'), ('}', '}')]);
 
         while let Some(c) = self.current_character {
             if c == '"' && !escape_char {
                 break;
+            }
+
+            if !escape_char && c == '{' && self.peek() == Some('{') {
+                // Escaped double brace - add single brace
+                self.advance(); // skip second {
+                string_val.push('{');
+                self.advance();
+                continue;
+            }
+
+            if !escape_char && c == '}' && self.peek() == Some('}') {
+                // Escaped double brace - add single brace
+                self.advance(); // skip second }
+                string_val.push('}');
+                self.advance();
+                continue;
+            }
+
+            if !escape_char && c == '{' {
+                // Start of interpolation
+                is_interpolated = true;
+                // Clone the string_val before pushing
+                interpolation_parts.push(("text".to_string(), string_val.clone()));
+                string_val.clear();
+
+                // Parse the expression inside braces
+                self.advance(); // skip {
+
+                let mut expr_str = String::new();
+                let mut brace_count = 1;
+
+                while let Some(expr_c) = self.current_character {
+                    if expr_c == '{' {
+                        brace_count += 1;
+                        expr_str.push(expr_c);
+                        self.advance();
+                    } else if expr_c == '}' {
+                        brace_count -= 1;
+                        if brace_count == 0 {
+                            self.advance(); // skip closing }
+                            break;
+                        }
+                        expr_str.push(expr_c);
+                        self.advance();
+                    } else {
+                        expr_str.push(expr_c);
+                        self.advance();
+                    }
+                }
+
+                interpolation_parts.push(("expr".to_string(), expr_str));
+                continue;
             }
 
             if escape_char {
@@ -402,12 +457,32 @@ impl Lexer {
             self.advance(); // Skip closing quote
         }
 
-        Token::new(
-            TokenType::String,
-            Some(string_val),
-            pos_start,
-            Some(self.position.clone()),
-        )
+        if is_interpolated {
+            // Add the last text part if there is any
+            if !string_val.is_empty() {
+                interpolation_parts.push(("text".to_string(), string_val));
+            }
+
+            // Store interpolation data
+            let mut encoded = String::from("__INTERPOLATED__");
+            for (part_type, content) in interpolation_parts {
+                encoded.push_str(&format!("|{}:{}", part_type, content));
+            }
+            Token::new(
+                TokenType::InterpolatedString,
+                Some(encoded),
+                pos_start,
+                Some(self.position.clone()),
+            )
+        } else {
+            // For regular strings, just use string_val directly (not moved yet)
+            Token::new(
+                TokenType::String,
+                Some(string_val),
+                pos_start,
+                Some(self.position.clone()),
+            )
+        }
     }
 
     /// Creates an equals or double-equals token

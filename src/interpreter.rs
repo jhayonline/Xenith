@@ -6,9 +6,12 @@
 
 use crate::context::Context;
 use crate::error::RuntimeError;
+use crate::lexer::Lexer;
 use crate::nodes::Node;
+use crate::parser::Parser;
 use crate::runtime_result::RuntimeResult;
 use crate::symbol_table::SymbolTable;
+use crate::utils::value_to_interpolated_string;
 use crate::values::{BuiltInFunction, Function, List, Number, Value, XenithString};
 
 /// Main interpreter that traverses and executes the AST
@@ -110,6 +113,7 @@ impl Interpreter {
             Node::Return(n) => self.visit_return(n, context),
             Node::Continue(n) => self.visit_continue(n, context),
             Node::Break(n) => self.visit_break(n, context),
+            Node::InterpolatedString(n) => self.visit_interpolated_string(n, context),
         }
     }
 
@@ -286,6 +290,66 @@ impl Interpreter {
             Ok(v) => result.success(v),
             Err(e) => RuntimeResult::new().failure(e),
         }
+    }
+
+    fn visit_interpolated_string(
+        &mut self,
+        node: &crate::nodes::InterpolatedStringNode,
+        context: &mut Context,
+    ) -> RuntimeResult {
+        let mut result = RuntimeResult::new();
+        let mut final_string = String::new();
+
+        for part in &node.parts {
+            if part.is_expression {
+                // Parse and evaluate the expression
+                let mut lexer = Lexer::new("<interpolated>".to_string(), part.content.clone());
+                let tokens = match lexer.make_tokens() {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return RuntimeResult::new().failure(e.base);
+                    }
+                };
+
+                let mut parser = Parser::new(tokens);
+                let parse_result = parser.parse();
+
+                if let Some(error) = parse_result.error {
+                    return RuntimeResult::new().failure(error);
+                }
+
+                let expr_node = match parse_result.node {
+                    Some(Node::List(list_node)) if list_node.element_nodes.len() == 1 => {
+                        // Extract the single expression from the list
+                        *list_node.element_nodes[0].clone()
+                    }
+                    Some(node) => node,
+                    None => {
+                        return RuntimeResult::new().failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                "Invalid interpolation expression",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                };
+
+                let value = result.register(self.visit(&expr_node, context));
+                if result.should_return() {
+                    return result;
+                }
+
+                // Use interpolation-specific conversion (no brackets)
+                final_string.push_str(&value_to_interpolated_string(&value));
+            } else {
+                final_string.push_str(&part.content);
+            }
+        }
+
+        result.success(Value::String(XenithString::new(final_string)))
     }
 
     fn visit_unary_op(

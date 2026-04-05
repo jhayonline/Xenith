@@ -815,6 +815,12 @@ impl Parser {
                     self.advance();
                     return result.success(node);
                 }
+                TokenType::InterpolatedString => {
+                    // Parse interpolated string
+                    let node = Node::InterpolatedString(InterpolatedStringNode::new(tok.clone()));
+                    self.advance();
+                    return result.success(node);
+                }
                 TokenType::Identifier => {
                     let node = Node::VarAccess(VarAccessNode {
                         variable_name_token: tok.clone(),

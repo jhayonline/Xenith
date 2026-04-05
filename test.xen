@@ -26,13 +26,13 @@ spawn age = 25
 spawn name = "Alice"
 spawn pi = 3.14159
 
-echo("   age = " + ret(age))
+echo("   age = " + age)  # Automatic conversion works!
 echo("   name = " + name)
-echo("   pi = " + ret(pi))
+echo("   pi = " + pi)     # Automatic conversion works!
 
 # Variable reassignment (no spawn keyword needed!)
 age = 26
-echo("   age (updated) = " + ret(age))
+echo("   age (updated) = " + age)
 echo("")
 
 #######################################
@@ -44,13 +44,13 @@ echo("3. ARITHMETIC:")
 spawn a = 10
 spawn b = 3
 
-echo("   a = " + ret(a) + ", b = " + ret(b))
-echo("   a + b = " + ret(a + b))
-echo("   a - b = " + ret(a - b))
-echo("   a * b = " + ret(a * b))
-echo("   a / b = " + ret(a / b))
-echo("   a ^ b = " + ret(a ^ b))
-echo("   -a = " + ret(-a))
+echo("   a = " + a + ", b = " + b)
+echo("   a + b = " + (a + b))
+echo("   a - b = " + (a - b))
+echo("   a * b = " + (a * b))
+echo("   a / b = " + (a / b))
+echo("   a ^ b = " + (a ^ b))
+echo("   -a = " + (-a))
 echo("")
 
 #######################################
@@ -63,13 +63,13 @@ spawn x = 5
 spawn y = 10
 spawn z = 5
 
-echo("   x = " + ret(x) + ", y = " + ret(y) + ", z = " + ret(z))
-echo("   x == z -> " + ret(x == z))
-echo("   x != y -> " + ret(x != y))
-echo("   x < y -> " + ret(x < y))
-echo("   y > x -> " + ret(y > x))
-echo("   x <= 5 -> " + ret(x <= 5))
-echo("   y >= 10 -> " + ret(y >= 10))
+echo("   x = " + x + ", y = " + y + ", z = " + z)
+echo("   x == z -> " + (x == z))
+echo("   x != y -> " + (x != y))
+echo("   x < y -> " + (x < y))
+echo("   y > x -> " + (y > x))
+echo("   x <= 5 -> " + (x <= 5))
+echo("   y >= 10 -> " + (y >= 10))
 echo("")
 
 #######################################
@@ -81,13 +81,13 @@ echo("5. LOGICAL OPERATORS:")
 spawn t = 1
 spawn f = 0
 
-echo("   TRUE = " + ret(t) + ", FALSE = " + ret(f))
-echo("   t && t -> " + ret(t && t))
-echo("   t && f -> " + ret(t && f))
-echo("   t || f -> " + ret(t || f))
-echo("   f || f -> " + ret(f || f))
-echo("   !t -> " + ret(!t))
-echo("   !f -> " + ret(!f))
+echo("   TRUE = " + t + ", FALSE = " + f)
+echo("   t && t -> " + (t && t))
+echo("   t && f -> " + (t && f))
+echo("   t || f -> " + (t || f))
+echo("   f || f -> " + (f || f))
+echo("   !t -> " + (!t))
+echo("   !f -> " + (!f))
 echo("")
 
 #######################################
@@ -126,11 +126,11 @@ echo("7. TERNARY OPERATOR:")
 
 spawn age2 = 18
 spawn status = age2 >= 18 ? "Adult" : "Minor"
-echo("   age " + ret(age2) + " -> " + status)
+echo("   age " + age2 + " -> " + status)
 
 spawn age3 = 16
 spawn status2 = age3 >= 18 ? "Adult" : "Minor"
-echo("   age " + ret(age3) + " -> " + status2)
+echo("   age " + age3 + " -> " + status2)
 echo("")
 
 #######################################
@@ -155,7 +155,7 @@ echo("   Popped index 1: " + popped)
 fruits = pop(fruits, 1)  # Update fruits after pop
 echo("   List after pop: " + ret(fruits))
 
-echo("   List length: " + ret(len(fruits)))
+echo("   List length: " + len(fruits))
 
 spawn list1 = [1, 2, 3]
 spawn list2 = [4, 5, 6]
@@ -163,7 +163,7 @@ spawn combined = list1 + list2
 echo("   Concatenated: " + ret(combined))
 
 spawn matrix = [[1, 2], [3, 4], [5, 6]]
-echo("   matrix/1/0 = " + ret(matrix/1/0))
+echo("   matrix/1/0 = " + (matrix/1/0))
 echo("")
 
 #######################################
@@ -174,23 +174,23 @@ echo("9. LOOPS:")
 
 echo("   FOR loop 0 to 4:")
 for i = 0 to 5 {
-    echo("     i = " + ret(i))
+    echo("     i = " + i)
 }
 
 echo("   FOR loop with STEP 2:")
 for i = 0 to 10 step 2 {
-    echo("     i = " + ret(i))
+    echo("     i = " + i)
 }
 
 echo("   FOR loop with negative STEP:")
 for i = 5 to 0 step -1 {
-    echo("     i = " + ret(i))
+    echo("     i = " + i)
 }
 
 echo("   WHILE loop countdown:")
 spawn count = 3
 while count > 0 {
-    echo("     countdown: " + ret(count))
+    echo("     countdown: " + count)
     count = count - 1  # Reassignment without spawn
 }
 
@@ -199,7 +199,7 @@ for i = 0 to 10 {
     when i == 5 {
         stop
     }
-    echo("     i = " + ret(i))
+    echo("     i = " + i)
 }
 
 echo("   CONTINUE example:")
@@ -207,7 +207,7 @@ for i = 0 to 5 {
     when i == 3 {
         skip
     }
-    echo("     i = " + ret(i))
+    echo("     i = " + i)
 }
 echo("")
 
@@ -227,10 +227,10 @@ method add(a, b) {
     release a + b
 }
 
-echo("   add(5, 3) = " + ret(add(5, 3)))
+echo("   add(5, 3) = " + add(5, 3))
 
 method double(x) -> x * 2
-echo("   double(7) = " + ret(double(7)))
+echo("   double(7) = " + double(7))
 
 method factorial(n) {
     spawn result = 1
@@ -242,7 +242,7 @@ method factorial(n) {
     release result
 }
 
-echo("   factorial(5) = " + ret(factorial(5)))
+echo("   factorial(5) = " + factorial(5))
 
 method range(n) {
     spawn result = []
@@ -257,7 +257,7 @@ method range(n) {
 echo("   range(5) = " + ret(range(5)))
 
 spawn my_double = double
-echo("   my_double(10) = " + ret(my_double(10)))
+echo("   my_double(10) = " + my_double(10))
 echo("")
 
 #######################################
@@ -266,19 +266,19 @@ echo("")
 
 echo("11. BUILT-IN FUNCTIONS:")
 
-echo("   is_num(42): " + ret(is_num(42)))
-echo("   is_num(\"hello\"): " + ret(is_num("hello")))
-echo("   is_str(\"hello\"): " + ret(is_str("hello")))
-echo("   is_list([1,2,3]): " + ret(is_list([1, 2, 3])))
-echo("   is_fun(double): " + ret(is_fun(double)))
+echo("   is_num(42): " + is_num(42))
+echo("   is_num(\"hello\"): " + is_num("hello"))
+echo("   is_str(\"hello\"): " + is_str("hello"))
+echo("   is_list([1,2,3]): " + is_list([1, 2, 3]))
+echo("   is_fun(double): " + is_fun(double))
 
 spawn captured = ret(12345)
 echo("   ret(12345) = " + captured)
 
-echo("   MATH_PI = " + ret(MATH_PI))
-echo("   TRUE = " + ret(TRUE))
-echo("   FALSE = " + ret(FALSE))
-echo("   NULL = " + ret(NULL))
+echo("   MATH_PI = " + MATH_PI)
+echo("   TRUE = " + TRUE)
+echo("   FALSE = " + FALSE)
+echo("   NULL = " + NULL)
 echo("")
 
 #######################################
@@ -303,11 +303,11 @@ method fibonacci(n) {
     release b
 }
 
-echo("   fibonacci(0) = " + ret(fibonacci(0)))
-echo("   fibonacci(1) = " + ret(fibonacci(1)))
-echo("   fibonacci(2) = " + ret(fibonacci(2)))
-echo("   fibonacci(5) = " + ret(fibonacci(5)))
-echo("   fibonacci(8) = " + ret(fibonacci(8)))
+echo("   fibonacci(0) = " + fibonacci(0))
+echo("   fibonacci(1) = " + fibonacci(1))
+echo("   fibonacci(2) = " + fibonacci(2))
+echo("   fibonacci(5) = " + fibonacci(5))
+echo("   fibonacci(8) = " + fibonacci(8))
 echo("")
 
 #######################################
@@ -352,7 +352,7 @@ method process_grades(student_list) {
             grade = "D"
         }
 
-        results = append(results, name + ": " + ret(score) + " -> " + grade)
+        results = append(results, name + ": " + score + " -> " + grade)
         total = total + score
         i = i + 1
     }
@@ -370,13 +370,56 @@ while j < len(grades) {
     echo("   " + grades/j)
     j = j + 1
 }
-echo("   Class average: " + ret(avg))
+echo("   Class average: " + avg)
 echo("")
 
 #######################################
-# 14. TEST SUMMARY
+# 14. STRING INTERPOLATION
 #######################################
 
+echo("14. STRING INTERPOLATION:")
+
+spawn user = "John"
+spawn user_age = 30
+spawn city = "New York"
+
+# Basic interpolation
+echo("   Hello, {user}! You are {user_age} years old and live in {city}.")
+
+# Math in interpolation
+echo("   5 + 3 = {5 + 3}")
+echo("   10 * 2 = {10 * 2}")
+echo("   100 / 4 = {100 / 4}")
+
+# Function calls in interpolation
+echo("   double(10) = {double(10)}")
+echo("   factorial(5) = {factorial(5)}")
+
+# Multiple expressions
+echo("   Sum: {a} + {b} = {a + b}")
+echo("   Product: {a} * {b} = {a * b}")
+
+# Escaped braces (showing literal braces)
+echo("   Escaped braces: {{ This will show as literal braces }}")
+
+# Complex expressions - using a variable to avoid escaped quotes
+spawn adult_status = user_age >= 18 ? "Yes" : "No"
+echo("   Is adult? {adult_status}")
+echo("   Next year you'll be {user_age + 1}")
+
+# Interpolation with lists
+spawn colors = ["red", "green", "blue"]
+echo("   First color: {colors/0}")
+
+# Expression with function call and ternary
+spawn max_value = a > b ? a : b
+echo("   Max of {a} and {b} is {max_value}")
+
+#######################################
+# 15. TEST SUMMARY
+#######################################
+
+echo("")
 echo("=" * 50)
 echo("TEST COMPLETE")
 echo("=" * 50)
