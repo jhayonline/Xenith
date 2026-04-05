@@ -35,7 +35,15 @@ impl RuntimeResult {
         self.func_return_value = res.func_return_value.take();
         self.loop_should_continue = res.loop_should_continue;
         self.loop_should_break = res.loop_should_break;
-        res.value.unwrap()
+
+        // If there's an error or return value, we shouldn't try to get the value
+        if self.error.is_some() || self.func_return_value.is_some() {
+            // Return a dummy value since we won't use it
+            return Value::Number(crate::values::Number::null());
+        }
+
+        res.value
+            .unwrap_or_else(|| Value::Number(crate::values::Number::null()))
     }
 
     /// Creates a successful result

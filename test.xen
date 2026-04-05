@@ -49,7 +49,7 @@ echo("   a + b = " + ret(a + b))
 echo("   a - b = " + ret(a - b))
 echo("   a * b = " + ret(a * b))
 echo("   a / b = " + ret(a / b))
-echo("   a ^ b = " + ret(a ^ b))  # Power
+echo("   a ^ b = " + ret(a ^ b))
 echo("   -a = " + ret(-a))
 echo("")
 
@@ -91,7 +91,7 @@ echo("   !f -> " + ret(!f))
 echo("")
 
 #######################################
-# 6. CONTROL FLOW (IF/ELIF/ELSE)
+# 6. CONTROL FLOW
 #######################################
 
 echo("6. CONTROL FLOW:")
@@ -108,7 +108,6 @@ when score >= 90 {
     echo("   Grade: F")
 }
 
-# Nested if
 spawn outer = 10
 spawn inner = 20
 
@@ -143,30 +142,24 @@ echo("8. LISTS:")
 spawn fruits = ["apple", "banana", "orange"]
 echo("   Original list: " + ret(fruits))
 
-# Access list elements
 echo("   fruits/0 = " + fruits/0)
 echo("   fruits/1 = " + fruits/1)
 echo("   fruits/2 = " + fruits/2)
 
-# Append to list
 append(fruits, "grape")
 echo("   After append: " + ret(fruits))
 
-# Pop from list
 spawn popped = pop(fruits, 1)
 echo("   Popped index 1: " + popped)
 echo("   List after pop: " + ret(fruits))
 
-# List length
 echo("   List length: " + ret(len(fruits)))
 
-# List concatenation
 spawn list1 = [1, 2, 3]
 spawn list2 = [4, 5, 6]
 spawn combined = list1 + list2
 echo("   Concatenated: " + ret(combined))
 
-# Nested lists
 spawn matrix = [[1, 2], [3, 4], [5, 6]]
 echo("   matrix/1/0 = " + ret(matrix/1/0))
 echo("")
@@ -177,25 +170,21 @@ echo("")
 
 echo("9. LOOPS:")
 
-# FOR loop
 echo("   FOR loop 0 to 4:")
 for i = 0 to 5 {
     echo("     i = " + ret(i))
 }
 
-# FOR loop with STEP
 echo("   FOR loop with STEP 2:")
 for i = 0 to 10 step 2 {
     echo("     i = " + ret(i))
 }
 
-# FOR loop with negative STEP
 echo("   FOR loop with negative STEP:")
 for i = 5 to 0 step -1 {
     echo("     i = " + ret(i))
 }
 
-# WHILE loop
 echo("   WHILE loop countdown:")
 spawn count = 3
 while count > 0 {
@@ -203,7 +192,6 @@ while count > 0 {
     spawn count = count - 1
 }
 
-# BREAK
 echo("   BREAK example:")
 for i = 0 to 10 {
     when i == 5 {
@@ -212,8 +200,7 @@ for i = 0 to 10 {
     echo("     i = " + ret(i))
 }
 
-# CONTINUE (skip)
-echo("   CONTINUE (skip) example:")
+echo("   CONTINUE example:")
 for i = 0 to 5 {
     when i == 3 {
         skip
@@ -223,30 +210,26 @@ for i = 0 to 5 {
 echo("")
 
 #######################################
-# 10. FUNCTIONS (method)
+# 10. FUNCTIONS
 #######################################
 
 echo("10. FUNCTIONS:")
 
-# Basic function
 method greet(name) {
     release "Hello, " + name + "!"
 }
 
 echo("   greet(\"Bob\") = " + greet("Bob"))
 
-# Function with multiple parameters
 method add(a, b) {
     release a + b
 }
 
 echo("   add(5, 3) = " + ret(add(5, 3)))
 
-# Arrow function (single expression)
 method double(x) -> x * 2
 echo("   double(7) = " + ret(double(7)))
 
-# Function with complex logic
 method factorial(n) {
     spawn result = 1
     spawn i = 1
@@ -259,7 +242,6 @@ method factorial(n) {
 
 echo("   factorial(5) = " + ret(factorial(5)))
 
-# Function returning a list
 method range(n) {
     spawn result = []
     spawn i = 0
@@ -272,7 +254,6 @@ method range(n) {
 
 echo("   range(5) = " + ret(range(5)))
 
-# First-class functions
 spawn my_double = double
 echo("   my_double(10) = " + ret(my_double(10)))
 echo("")
@@ -283,18 +264,15 @@ echo("")
 
 echo("11. BUILT-IN FUNCTIONS:")
 
-# Type checking
 echo("   is_num(42): " + ret(is_num(42)))
 echo("   is_num(\"hello\"): " + ret(is_num("hello")))
 echo("   is_str(\"hello\"): " + ret(is_str("hello")))
 echo("   is_list([1,2,3]): " + ret(is_list([1, 2, 3])))
 echo("   is_fun(double): " + ret(is_fun(double)))
 
-# ret() function (converts to string)
 spawn captured = ret(12345)
 echo("   ret(12345) = " + captured)
 
-# Constants
 echo("   MATH_PI = " + ret(MATH_PI))
 echo("   TRUE = " + ret(TRUE))
 echo("   FALSE = " + ret(FALSE))
@@ -302,7 +280,7 @@ echo("   NULL = " + ret(NULL))
 echo("")
 
 #######################################
-# 12. COMPLEX EXAMPLE - FIBONACCI
+# 12. FIBONACCI
 #######################################
 
 echo("12. FIBONACCI SEQUENCE:")
@@ -331,33 +309,36 @@ echo("   fibonacci(8) = " + ret(fibonacci(8)))
 echo("")
 
 #######################################
-# 13. COMPLEX EXAMPLE - DATA PROCESSING
+# 13. DATA PROCESSING
 #######################################
 
 echo("13. DATA PROCESSING:")
 
-# Student records as lists
-spawn students = []
 spawn alice = ["Alice", 85]
 spawn bob = ["Bob", 62]
 spawn charlie = ["Charlie", 95]
 spawn diana = ["Diana", 78]
 
-append(students, alice)
-append(students, bob)
-append(students, charlie)
-append(students, diana)
+method add_student(list, student) {
+    release append(list, student)
+}
+
+spawn students = []
+spawn students = add_student(students, alice)
+spawn students = add_student(students, bob)
+spawn students = add_student(students, charlie)
+spawn students = add_student(students, diana)
 
 method process_grades(student_list) {
     spawn results = []
-    spawn total = 0
+    spawn total = 0.0
     spawn i = 0
-    
+
     while i < len(student_list) {
         spawn student = student_list/i
         spawn name = student/0
         spawn score = student/1
-        
+
         spawn grade = "F"
         when score >= 90 {
             spawn grade = "A"
@@ -368,12 +349,12 @@ method process_grades(student_list) {
         } or when score >= 60 {
             spawn grade = "D"
         }
-        
+
         append(results, name + ": " + ret(score) + " -> " + grade)
         spawn total = total + score
         spawn i = i + 1
     }
-    
+
     spawn average = total / len(student_list)
     release [results, average]
 }

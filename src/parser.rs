@@ -335,8 +335,98 @@ impl Parser {
             }
         }
 
-        // Parse comparison
-        self.comp_expr()
+        // Parse ternary expression
+        self.ternary_expr()
+    }
+
+    fn ternary_expr(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+
+        // Parse the condition
+        let condition = result.register(&self.comp_expr());
+        if result.error.is_some() {
+            return result;
+        }
+
+        // Check for ternary operator
+        if let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::Question {
+                let question_pos = tok.position_start.clone();
+                self.advance();
+
+                // Parse true expression
+                let true_expr = result.register(&self.expr());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                // Check for colon
+                match self.current_token() {
+                    Some(t) if t.kind == TokenType::Colon => {
+                        self.advance();
+                    }
+                    Some(t) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                t.position_start.clone(),
+                                t.position_end.clone(),
+                                "Expected ':' in ternary expression",
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                question_pos,
+                                Self::dummy_pos(),
+                                "Expected ':' in ternary expression",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                // Parse false expression
+                let false_expr = result.register(&self.ternary_expr());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                if let (Some(cond), Some(true_val), Some(false_val)) =
+                    (condition, true_expr, false_expr)
+                {
+                    let pos_start = cond.position_start().clone();
+                    let pos_end = false_val.position_end().clone();
+
+                    // Clone cond here to avoid moving it
+                    return result.success(Node::Ternary(Box::new(TernaryNode {
+                        condition: Box::new(cond.clone()),
+                        true_expression: Box::new(true_val),
+                        false_expression: Box::new(false_val),
+                        position_start: pos_start,
+                        position_end: pos_end,
+                    })));
+                }
+
+                // If we get here, something went wrong with the ternary parsing
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        Self::dummy_pos(),
+                        Self::dummy_pos(),
+                        "Invalid ternary expression",
+                    )
+                    .base,
+                );
+            }
+        }
+
+        // No ternary operator, return the condition (clone it to avoid moving)
+        if let Some(cond) = condition {
+            result.success(cond)
+        } else {
+            result
+        }
     }
 
     fn comp_expr(&mut self) -> ParseResult {
@@ -351,8 +441,8 @@ impl Parser {
         while let Some(tok) = self.current_token().cloned() {
             let op_type = tok.kind.clone();
 
-            // Check for comparison operators
-            let is_comparison = matches!(
+            // Check for comparison operators AND logical operators
+            let is_operator = matches!(
                 op_type,
                 TokenType::Ee
                     | TokenType::Ne
@@ -362,7 +452,11 @@ impl Parser {
                     | TokenType::Gte
             );
 
-            if !is_comparison {
+            // Check for logical operators (&& and || are keywords)
+            let is_logical = tok.matches(TokenType::Keyword, Some("&&"))
+                || tok.matches(TokenType::Keyword, Some("||"));
+
+            if !is_operator && !is_logical {
                 break;
             }
 
@@ -446,7 +540,32 @@ impl Parser {
         let mut result = ParseResult::new();
 
         if let Some(tok) = self.current_token().cloned() {
+            // Handle unary plus, minus, and NOT (!)
             if tok.kind == TokenType::Plus || tok.kind == TokenType::Minus {
+                let op = tok.clone();
+                self.advance();
+
+                let node = result.register(&self.factor());
+                if result.error.is_some() {
+                    return result;
+                }
+                let node = node.unwrap();
+
+                let pos_end = self
+                    .current_token()
+                    .map(|t| t.position_end.clone())
+                    .unwrap_or_else(|| tok.position_end.clone());
+
+                return result.success(Node::UnaryOp(Box::new(UnaryOpNode {
+                    operator_token: op,
+                    node: Box::new(node),
+                    position_start: tok.position_start.clone(),
+                    position_end: pos_end,
+                })));
+            }
+
+            // Handle logical NOT (!)
+            if tok.matches(TokenType::Keyword, Some("!")) {
                 let op = tok.clone();
                 self.advance();
 
@@ -768,6 +887,7 @@ impl Parser {
         let mut result = ParseResult::new();
         let mut cases = Vec::new();
 
+        // Expect "when" keyword
         let pos_start = match self.current_token() {
             Some(t) if t.matches(TokenType::Keyword, Some("when")) => t.position_start.clone(),
             Some(t) => {
@@ -793,12 +913,13 @@ impl Parser {
         };
         self.advance();
 
-        let condition = result.register(&self.expr());
+        // Parse first condition and body
+        let mut condition = result.register(&self.expr());
         if result.error.is_some() {
             return result;
         }
 
-        let body = if let Some(t) = self.current_token() {
+        let mut body = if let Some(t) = self.current_token() {
             if t.kind == TokenType::LBrace {
                 result.register(&self.block())
             } else {
@@ -812,11 +933,43 @@ impl Parser {
             return result;
         }
 
-        if let (Some(cond), Some(body_node)) = (condition, body) {
+        if let (Some(cond), Some(body_node)) = (condition.take(), body.take()) {
             cases.push((Box::new(cond), Box::new(body_node)));
         }
 
-        // Parse else clause
+        // Parse any "or when" chains
+        while let Some(tok) = self.current_token() {
+            if tok.matches(TokenType::Keyword, Some("or when")) {
+                self.advance(); // consume "or when"
+
+                condition = result.register(&self.expr());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                body = if let Some(t) = self.current_token() {
+                    if t.kind == TokenType::LBrace {
+                        result.register(&self.block())
+                    } else {
+                        result.register(&self.statement())
+                    }
+                } else {
+                    result.register(&self.statement())
+                };
+
+                if result.error.is_some() {
+                    return result;
+                }
+
+                if let (Some(cond), Some(body_node)) = (condition.take(), body.take()) {
+                    cases.push((Box::new(cond), Box::new(body_node)));
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Parse optional "otherwise" clause
         let mut else_case = None;
         if let Some(t) = self.current_token() {
             if t.matches(TokenType::Keyword, Some("otherwise")) {
@@ -836,14 +989,14 @@ impl Parser {
                     return result;
                 }
 
-                if let Some(body) = else_body {
+                if let Some(body_node) = else_body {
                     let null_node = Node::Number(NumberNode::new(Token::new(
                         TokenType::Int,
                         Some("0".to_string()),
                         pos_start.clone(),
                         None,
                     )));
-                    else_case = Some((Box::new(body), Box::new(null_node)));
+                    else_case = Some((Box::new(body_node), Box::new(null_node)));
                 }
             }
         }
@@ -1198,8 +1351,38 @@ impl Parser {
             }
         }
 
-        // Parse body
+        // Parse body - check for arrow function first
         match self.current_token() {
+            Some(t) if t.kind == TokenType::Arrow => {
+                // Arrow function (single expression)
+                self.advance();
+
+                let body = result.register(&self.expr());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                if let Some(body_node) = body {
+                    let pos_end = body_node.position_end().clone();
+                    result.success(Node::FuncDef(Box::new(FuncDefNode {
+                        variable_name_token: var_name_tok,
+                        arg_name_toks,
+                        body_node: Box::new(body_node),
+                        should_auto_return: true,
+                        position_start: pos_start,
+                        position_end: pos_end,
+                    })))
+                } else {
+                    result.failure(
+                        InvalidSyntaxError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "Expected expression after '->'",
+                        )
+                        .base,
+                    )
+                }
+            }
             Some(t) if t.kind == TokenType::LBrace => {
                 let body = result.register(&self.block());
                 if result.error.is_some() {
@@ -1224,12 +1407,17 @@ impl Parser {
                 InvalidSyntaxError::new(
                     t.position_start.clone(),
                     t.position_end.clone(),
-                    "Expected '{'",
+                    "Expected '->' or '{'",
                 )
                 .base,
             ),
             None => result.failure(
-                InvalidSyntaxError::new(Self::dummy_pos(), Self::dummy_pos(), "Expected '{'").base,
+                InvalidSyntaxError::new(
+                    Self::dummy_pos(),
+                    Self::dummy_pos(),
+                    "Expected '->' or '{'",
+                )
+                .base,
             ),
         }
     }

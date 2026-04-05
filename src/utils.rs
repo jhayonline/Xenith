@@ -4,6 +4,7 @@
 //! error message formatting with arrow pointers.
 
 use crate::position::Position;
+use crate::values::Value; // Add this import
 
 /// Checks if a character is a digit
 pub fn is_digit(c: char) -> bool {
@@ -89,4 +90,39 @@ pub fn string_with_arrows(
     }
 
     result.replace('\t', "")
+}
+
+/// Converts a Value to its string representation
+///
+/// # Arguments
+/// * `value` - The runtime value to convert
+///
+/// # Returns
+/// A string representation of the value
+pub fn value_to_string(value: &Value) -> String {
+    match value {
+        Value::Number(n) => n.value.to_string(),
+        Value::String(s) => s.value.clone(),
+        Value::List(l) => {
+            let mut result = String::from("[");
+            for (i, elem) in l.elements.iter().enumerate() {
+                if i > 0 {
+                    result.push_str(", ");
+                }
+                result.push_str(&value_to_string(elem));
+            }
+            result.push(']');
+            result
+        }
+        Value::Function(f) => {
+            if let Some(name) = &f.name {
+                format!("<function {}>", name)
+            } else {
+                "<anonymous function>".to_string()
+            }
+        }
+        Value::BuiltInFunction(b) => {
+            format!("<built-in function {}>", b.name)
+        }
+    }
 }

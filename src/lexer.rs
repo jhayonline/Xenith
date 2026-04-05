@@ -29,7 +29,16 @@ impl Lexer {
             file_name,
             text,
         };
-        lexer.advance();
+
+        // Set the first character without advancing first
+        lexer.current_character = lexer.text.chars().next();
+
+        // Skip UTF-8 BOM if present (U+FEFF)
+        if lexer.current_character == Some('\u{feff}') {
+            lexer.advance(); // Skip the BOM
+            lexer.current_character = lexer.text.chars().nth(lexer.position.index);
+        }
+
         lexer
     }
 
@@ -41,14 +50,13 @@ impl Lexer {
 
     /// Skips a comment until the end of line
     pub fn skip_comment(&mut self) {
-        self.advance();
+        self.advance(); // Skip the '#'
         while let Some(c) = self.current_character {
             if c == '\n' {
                 break;
             }
             self.advance();
         }
-        self.advance();
     }
 
     /// Converts the entire source into a vector of tokens
@@ -322,47 +330,37 @@ impl Lexer {
             }
         }
 
-        // Check for multi-word keyword "or when"
-        if id_str == "or" && self.peek() == Some(' ') {
-            let mut temp_pos = self.position.index;
-            let mut chars: Vec<char> = self.text.chars().skip(temp_pos).collect();
+        // Special handling for "or when"
+        if id_str == "or" {
+            let mut temp_index = self.position.index;
 
             // Skip spaces
-            while !chars.is_empty() && chars[0] == ' ' {
-                temp_pos += 1;
-                chars = self.text.chars().skip(temp_pos).collect();
+            while let Some(c) = self.text.chars().nth(temp_index) {
+                if c.is_whitespace() {
+                    temp_index += 1;
+                } else {
+                    break;
+                }
             }
 
-            // Check for "when"
-            if !chars.is_empty() && is_letter(chars[0]) {
-                let mut word = String::new();
-                let mut temp = temp_pos;
-                let mut word_chars = self.text.chars().skip(temp);
-                while let Some(c) = word_chars.next() {
-                    if is_letter_or_digit(c) {
-                        word.push(c);
-                        temp += 1;
-                    } else {
-                        break;
-                    }
+            // Peek at the next word
+            let next_word: String = self.text.chars().skip(temp_index).take(4).collect(); // "when" has 4 letters
+            if next_word == "when" {
+                // Consume space + "when"
+                while self.position.index < temp_index + 4 {
+                    self.advance();
                 }
 
-                if word == "when" {
-                    // Consume space and "when"
-                    self.advance(); // consume space
-                    for _ in 0.."when".len() {
-                        self.advance();
-                    }
-                    return Token::new(
-                        TokenType::Keyword,
-                        Some("or when".to_string()),
-                        pos_start,
-                        Some(self.position.clone()),
-                    );
-                }
+                return Token::new(
+                    TokenType::Keyword,
+                    Some("or when".to_string()),
+                    pos_start,
+                    Some(self.position.clone()),
+                );
             }
         }
 
+        // Normal keyword or identifier
         let kind = if KEYWORDS.contains(&id_str.as_str()) {
             TokenType::Keyword
         } else {

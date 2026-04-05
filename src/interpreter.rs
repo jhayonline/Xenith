@@ -189,15 +189,18 @@ impl Interpreter {
 
         match context.symbol_table.get(var_name) {
             Some(value) => RuntimeResult::new().success(value.clone()),
-            None => RuntimeResult::new().failure(
-                RuntimeError::new(
-                    node.position_start.clone(),
-                    node.position_end.clone(),
-                    &format!("'{}' is not defined", var_name),
-                    Some(context.clone()),
-                )
-                .base,
-            ),
+            None => match self.global_symbol_table.get(var_name) {
+                Some(value) => RuntimeResult::new().success(value.clone()),
+                None => RuntimeResult::new().failure(
+                    RuntimeError::new(
+                        node.position_start.clone(),
+                        node.position_end.clone(),
+                        &format!("'{}' is not defined", var_name),
+                        Some(context.clone()),
+                    )
+                    .base,
+                ),
+            },
         }
     }
 
@@ -249,6 +252,9 @@ impl Interpreter {
             crate::tokens::TokenType::Gt => left.greater_than(&right),
             crate::tokens::TokenType::Lte => left.less_than_or_equal(&right),
             crate::tokens::TokenType::Gte => left.greater_than_or_equal(&right),
+            // Add logical operators
+            _ if op.matches(crate::tokens::TokenType::Keyword, Some("&&")) => left.anded_by(&right),
+            _ if op.matches(crate::tokens::TokenType::Keyword, Some("||")) => left.ored_by(&right),
             _ => {
                 return RuntimeResult::new().failure(
                     RuntimeError::new(
@@ -491,27 +497,27 @@ impl Interpreter {
             args.push(arg);
         }
 
-        match callee {
-            Value::Function(func) => {
-                let call_result = func.execute(args, context.clone(), self);
-                result.register(call_result);
-                result
+        // Execute the function or built-in safely
+        let call_result = match callee {
+            Value::Function(func) => func.execute(args, context.clone(), self),
+            Value::BuiltInFunction(builtin) => builtin.execute(args, self),
+            _ => {
+                return result.failure(
+                    RuntimeError::new(
+                        node.position_start.clone(),
+                        node.position_end.clone(),
+                        "Cannot call non-function value",
+                        Some(context.clone()),
+                    )
+                    .base,
+                );
             }
-            Value::BuiltInFunction(builtin) => {
-                let call_result = builtin.execute(args, self);
-                result.register(call_result);
-                result
-            }
-            _ => RuntimeResult::new().failure(
-                RuntimeError::new(
-                    node.position_start.clone(),
-                    node.position_end.clone(),
-                    "Cannot call non-function value",
-                    Some(context.clone()),
-                )
-                .base,
-            ),
-        }
+        };
+
+        // Register the result properly to propagate errors, returns, and loop controls
+        let value = result.register(call_result);
+
+        result.success(value)
     }
 
     fn visit_return(

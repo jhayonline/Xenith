@@ -12,6 +12,7 @@ use crate::error::{Error, RuntimeError};
 use crate::interpreter::Interpreter;
 use crate::nodes::Node;
 use crate::runtime_result::RuntimeResult;
+use crate::utils::value_to_string;
 
 /// All possible runtime values in Xenith
 #[derive(Debug, Clone)]
@@ -94,6 +95,18 @@ impl Value {
             }
             (Value::String(a), Value::String(b)) => {
                 let mut new = a.value.clone();
+                new.push_str(&b.value);
+                Ok(Value::String(XenithString::new(new)))
+            }
+            // String + Number: convert number to string and concatenate
+            (Value::String(a), Value::Number(b)) => {
+                let mut new = a.value.clone();
+                new.push_str(&b.value.to_string());
+                Ok(Value::String(XenithString::new(new)))
+            }
+            // Number + String: convert number to string and concatenate
+            (Value::Number(a), Value::String(b)) => {
+                let mut new = a.value.to_string();
                 new.push_str(&b.value);
                 Ok(Value::String(XenithString::new(new)))
             }
@@ -373,6 +386,28 @@ impl Value {
             .base),
         }
     }
+
+    /// Logical AND operation
+    pub fn anded_by(&self, other: &Value) -> Result<Value, Error> {
+        let left_true = self.is_true();
+        let right_true = other.is_true();
+        Ok(Value::Number(Number::new(if left_true && right_true {
+            1.0
+        } else {
+            0.0
+        })))
+    }
+
+    /// Logical OR operation
+    pub fn ored_by(&self, other: &Value) -> Result<Value, Error> {
+        let left_true = self.is_true();
+        let right_true = other.is_true();
+        Ok(Value::Number(Number::new(if left_true || right_true {
+            1.0
+        } else {
+            0.0
+        })))
+    }
 }
 
 /// Number runtime value
@@ -583,29 +618,7 @@ impl BuiltInFunction {
 
     fn ret(&self, args: Vec<Value>) -> RuntimeResult {
         if let Some(arg) = args.first() {
-            match arg {
-                Value::Number(n) => RuntimeResult::new()
-                    .success(Value::String(XenithString::new(n.value.to_string()))),
-                Value::String(s) => RuntimeResult::new().success(Value::String(s.clone())),
-                Value::List(l) => {
-                    let mut result = String::from("[");
-                    for (i, elem) in l.elements.iter().enumerate() {
-                        if i > 0 {
-                            result.push_str(", ");
-                        }
-                        match elem {
-                            Value::Number(n) => result.push_str(&n.value.to_string()),
-                            Value::String(s) => result.push_str(&format!("\"{}\"", s.value)),
-                            _ => result.push('?'),
-                        }
-                    }
-                    result.push(']');
-                    RuntimeResult::new().success(Value::String(XenithString::new(result)))
-                }
-                _ => {
-                    RuntimeResult::new().success(Value::String(XenithString::new("?".to_string())))
-                }
-            }
+            RuntimeResult::new().success(Value::String(XenithString::new(value_to_string(arg))))
         } else {
             RuntimeResult::new().success(Value::String(XenithString::new("".to_string())))
         }
