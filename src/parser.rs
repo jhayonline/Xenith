@@ -663,6 +663,20 @@ impl Parser {
         // Check for field assignment (e.g., object.field = value)
         let start_index = self.token_index;
 
+        // Check if we have an identifier followed by dot
+        if let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::Identifier {
+                if let Some(dot) = self.peek_token() {
+                    if dot.kind == TokenType::Dot {
+                        // This looks like a method call, let call() handle it
+                        return self.call();
+                    }
+                }
+            }
+        }
+
+        self.token_index = start_index;
+
         // Try to parse a field access
         if let Some(mut node) = self.try_parse_field_access() {
             // Check if next token is '='
@@ -2497,6 +2511,8 @@ impl Parser {
                                 );
                             }
                         }
+                    } else {
+                        //
                     }
                 }
 
@@ -2658,7 +2674,6 @@ impl Parser {
                     let struct_pos_start = tok.position_start.clone();
                     let struct_pos_end = tok.position_end.clone();
 
-                    // Advance before checking for lbrace to avoid borrow issues
                     self.advance();
 
                     // Check if this is a struct instantiation (followed by {} ON THE SAME LINE)
@@ -2666,7 +2681,22 @@ impl Parser {
                         if lbrace.kind == TokenType::LBrace
                             && lbrace.position_start.line == struct_pos_end.line
                         {
-                            return self.struct_instantiation(struct_name);
+                            // Peek inside: next token after '{' should be '}' or 'identifier :'
+                            let after_brace = self.tokens.get(self.token_index + 1);
+                            let is_struct = match after_brace {
+                                Some(t) if t.kind == TokenType::RBrace => true, // empty struct
+                                Some(t) if t.kind == TokenType::Identifier => {
+                                    // Check if token after identifier is ':'
+                                    matches!(
+                                        self.tokens.get(self.token_index + 2),
+                                        Some(t2) if t2.kind == TokenType::Colon
+                                    )
+                                }
+                                _ => false,
+                            };
+                            if is_struct {
+                                return self.struct_instantiation(struct_name);
+                            }
                         }
                     }
 
@@ -2682,105 +2712,9 @@ impl Parser {
                         position_end: struct_pos_end,
                     });
 
-                    // Check for dot access (e.g., user.name or user.keys())
-                    if let Some(dot) = self.current_token().cloned() {
-                        if dot.kind == TokenType::Dot {
-                            self.advance(); // consume '.'
-
-                            // Check what comes after the dot
-                            if let Some(prop) = self.current_token().cloned() {
-                                if prop.kind == TokenType::Identifier {
-                                    let prop_name = prop.value.clone().unwrap();
-                                    self.advance();
-
-                                    // Check if this is a method call (followed by '(')
-                                    if let Some(lparen) = self.current_token().cloned() {
-                                        if lparen.kind == TokenType::LParen {
-                                            // This is a method call - let the call method handle it
-                                            // Create a method access node and return it
-                                            let method_token = Token::new(
-                                                TokenType::Identifier,
-                                                Some(prop_name),
-                                                prop.position_start.clone(),
-                                                Some(prop.position_end.clone()),
-                                            );
-
-                                            // Clone node before moving it into the Box
-                                            let node_clone = node.clone();
-                                            let method_access =
-                                                Node::MethodAccess(MethodAccessNode {
-                                                    object: Box::new(node_clone),
-                                                    method_name: method_token,
-                                                    position_start: node.position_start().clone(),
-                                                    position_end: prop.position_end.clone(),
-                                                });
-
-                                            // Return the method access node (will be handled by call)
-                                            return result.success(method_access);
-                                        } else {
-                                            // This is property access (map key lookup)
-                                            let key_node =
-                                                Node::String(StringNode::new(Token::new(
-                                                    TokenType::String,
-                                                    Some(prop_name),
-                                                    prop.position_start.clone(),
-                                                    Some(prop.position_end.clone()),
-                                                )));
-
-                                            let index_token = Token::new(
-                                                TokenType::Index,
-                                                None,
-                                                dot.position_start.clone(),
-                                                Some(prop.position_end.clone()),
-                                            );
-
-                                            // Clone node before moving it into the Box
-                                            let node_clone = node.clone();
-                                            let access_node = Node::BinaryOperator(Box::new(
-                                                BinaryOperatorNode {
-                                                    left_node: Box::new(node_clone),
-                                                    operator_token: index_token,
-                                                    right_node: Box::new(key_node),
-                                                    position_start: node.position_start().clone(),
-                                                    position_end: prop.position_end.clone(),
-                                                },
-                                            ));
-
-                                            return self.parse_indexing(access_node, result);
-                                        }
-                                    } else {
-                                        // Property access without parentheses
-                                        let key_node = Node::String(StringNode::new(Token::new(
-                                            TokenType::String,
-                                            Some(prop_name),
-                                            prop.position_start.clone(),
-                                            Some(prop.position_end.clone()),
-                                        )));
-
-                                        let index_token = Token::new(
-                                            TokenType::Index,
-                                            None,
-                                            dot.position_start.clone(),
-                                            Some(prop.position_end.clone()),
-                                        );
-
-                                        // Clone node before moving it into the Box
-                                        let node_clone = node.clone();
-                                        let access_node =
-                                            Node::BinaryOperator(Box::new(BinaryOperatorNode {
-                                                left_node: Box::new(node_clone),
-                                                operator_token: index_token,
-                                                right_node: Box::new(key_node),
-                                                position_start: node.position_start().clone(),
-                                                position_end: prop.position_end.clone(),
-                                            }));
-
-                                        return self.parse_indexing(access_node, result);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    // REMOVED: All dot-access handling code
+                    // The call() function will handle method calls like object.method()
+                    // Just return the variable access node and let call() process any following dots
 
                     // Check for indexing after identifier
                     return self.parse_indexing(node, result);
@@ -3645,6 +3579,15 @@ impl Parser {
         let condition = result.register(&self.expr());
         if result.error.is_some() {
             return result;
+        }
+
+        // Skip newlines before body
+        while let Some(t) = self.current_token() {
+            if t.kind == TokenType::Newline {
+                self.advance();
+            } else {
+                break;
+            }
         }
 
         let body = if let Some(t) = self.current_token() {

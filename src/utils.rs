@@ -93,23 +93,11 @@ pub fn string_with_arrows(
 }
 
 /// Converts a Value to its string representation
-///
-/// # Arguments
-/// * `value` - The runtime value to convert
-///
-/// # Returns
-/// A string representation of the value
 pub fn value_to_string(value: &Value) -> String {
     match value {
         Value::Number(n) => {
-            // Check if this is actually a boolean value
-            if n.value == 0.0 {
-                "false".to_string()
-            } else if n.value == 1.0 {
-                "true".to_string()
-            } else {
-                n.value.to_string()
-            }
+            // Don't convert to boolean - show actual number
+            n.value.to_string()
         }
         Value::String(s) => s.value.clone(),
         Value::List(l) => {
@@ -166,14 +154,8 @@ pub fn value_to_string(value: &Value) -> String {
 pub fn value_to_interpolated_string(value: &Value) -> String {
     match value {
         Value::Number(n) => {
-            // Check if this is actually a boolean value
-            if n.value == 0.0 {
-                "false".to_string()
-            } else if n.value == 1.0 {
-                "true".to_string()
-            } else {
-                n.value.to_string()
-            }
+            // Don't convert to boolean - show actual number
+            n.value.to_string()
         }
         Value::String(s) => s.value.clone(),
         Value::List(l) => {
