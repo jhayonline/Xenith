@@ -1,5 +1,5 @@
-# Comprehensive Xenith Language Test
-# This program tests all major features of the language
+# Comprehensive Xenith Language Test - With Full Type System
+# This program tests all major features of the language with explicit types
 
 #######################################
 # 1. BASIC OUTPUT AND COMMENTS
@@ -262,7 +262,8 @@ method range(n: int) -> list<int> {
 
 echo("   range(5) = {ret(range(5))}")
 
-spawn my_double: method(int) -> int = double
+type IntFunction = method(int) -> int
+spawn my_double: IntFunction = double
 echo("   my_double(10) = {my_double(10)}")
 
 # Test void function
