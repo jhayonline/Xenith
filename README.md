@@ -11,3 +11,22 @@ Xenith was originally written in Python, which made developing and experimenting
 At the time I wrote the Python version, I was still very new to Rust and not comfortable enough with its ecosystem and ownership model to implement a full interpreter. Over the past 14 months, and especially during the last 8 months of consistent Rust development, I’ve gained the experience and confidence to take on this rewrite.
 
 This Rust edition of Xenith aims to retain the language’s original simplicity and expressiveness while drastically improving performance, safety, and maintainability—thanks to Rust’s speed, type system, and memory guarantees.
+
+## Xenith's Features
+
+- ✅ Basic output and variables
+- ✅ Arithmetic operations
+- ✅ Comparison and logical operators
+- ✅ Control flow (when/or when/otherwise, ternary)
+- ✅ Lists with modern syntax (append, pop, indexing)
+- ✅ Loops (for, while, stop, skip)
+- ✅ Methods (including arrow methods and closures)
+- ✅ Built-in methods
+- ✅ Fibonacci sequence
+- ✅ Data processing with lists
+- ✅ Increment/decrement operators (++, --, +=, -=)
+- ✅ Maps with iteration (keys, values, items)
+- ✅ Pattern matching (match expressions)
+- ✅ String interpolation
+- ✅ Proper variable scoping (functions can now modify outer variables!)
+
