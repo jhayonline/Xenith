@@ -6,11 +6,19 @@
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::path::Path;
 
 use xenith::run;
 
 /// Runs a Xenith file
 fn run_file(filename: &str) {
+    // Check file extension
+    let path = Path::new(filename);
+    if path.extension().and_then(|ext| ext.to_str()) != Some("xen") {
+        eprintln!("Error: '{}' is not a .xen file", filename);
+        std::process::exit(1);
+    }
+
     match fs::read_to_string(filename) {
         Ok(source) => match run(filename, &source) {
             Ok(_) => {}

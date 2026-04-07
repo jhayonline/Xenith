@@ -48,6 +48,23 @@ impl ModuleRegistry {
         self.resolve_local(clean_path)
     }
 
+    fn resolve_local(&self, path: &str) -> Option<PathBuf> {
+        // Replace :: with OS path separator
+        let file_path = path.replace("::", "/");
+
+        // Get directory of current file
+        let current_dir = self.current_file.parent()?;
+
+        // Only look for .xen files
+        let candidate = current_dir.join(&file_path).with_extension("xen");
+
+        if candidate.exists() {
+            Some(candidate)
+        } else {
+            None
+        }
+    }
+
     fn resolve_stdlib(&self, path: &str) -> Option<PathBuf> {
         // Replace :: with path separator
         let file_path = path.replace("::", "/");
@@ -56,27 +73,14 @@ impl ModuleRegistry {
         let exe_path = std::env::current_exe().ok()?;
         let stdlib_dir = exe_path.parent()?.join("stdlib");
 
-        let candidates = vec![
-            stdlib_dir.join(&file_path).with_extension("xen"),
-            stdlib_dir.join(&file_path).join("mod.xen"),
-        ];
+        // Only look for .xen files
+        let candidate = stdlib_dir.join(&file_path).with_extension("xen");
 
-        candidates.into_iter().find(|p| p.exists())
-    }
-
-    fn resolve_local(&self, path: &str) -> Option<PathBuf> {
-        // Replace :: with OS path separator
-        let file_path = path.replace("::", "/");
-
-        // Get directory of current file
-        let current_dir = self.current_file.parent()?;
-
-        let candidates = vec![
-            current_dir.join(&file_path).with_extension("xen"),
-            current_dir.join(&file_path).join("mod.xen"),
-        ];
-
-        candidates.into_iter().find(|p| p.exists())
+        if candidate.exists() {
+            Some(candidate)
+        } else {
+            None
+        }
     }
 
     /// Load a module (with caching)
