@@ -298,17 +298,29 @@ impl Lexer {
                     }
                     '=' => {
                         if self.peek() == Some('>') {
-                            // Arrow token =>
+                            // Fat arrow token => (double arrow)
+                            let pos_start = self.position.copy();
+                            self.advance(); // consume '='
+                            self.advance(); // consume '>'
+                            tokens.push(Token::new(
+                                TokenType::FatArrow, // NEW token type for =>
+                                None,
+                                pos_start,
+                                Some(self.position.clone()),
+                            ));
+                        } else if self.peek() == Some('=') {
+                            // Double equals ==
                             let pos_start = self.position.copy();
                             self.advance();
                             self.advance();
                             tokens.push(Token::new(
-                                TokenType::Arrow,
+                                TokenType::Ee,
                                 None,
                                 pos_start,
                                 Some(self.position.clone()),
                             ));
                         } else {
+                            // Single equals =
                             tokens.push(self.make_equals());
                         }
                     }
@@ -437,13 +449,11 @@ impl Lexer {
             }
 
             // Peek at the next word
-            let next_word: String = self.text.chars().skip(temp_index).take(4).collect(); // "when" has 4 letters
+            let next_word: String = self.text.chars().skip(temp_index).take(4).collect();
             if next_word == "when" {
-                // Consume space + "when"
                 while self.position.index < temp_index + 4 {
                     self.advance();
                 }
-
                 return Token::new(
                     TokenType::Keyword,
                     Some("or when".to_string()),
@@ -453,11 +463,27 @@ impl Lexer {
             }
         }
 
-        // Normal keyword or identifier
-        let kind = if KEYWORDS.contains(&id_str.as_str()) {
-            TokenType::Keyword
-        } else {
-            TokenType::Identifier
+        // Check for type keywords
+        let kind = match id_str.as_str() {
+            "int" => TokenType::TypeInt,
+            "float" => TokenType::TypeFloat,
+            "string" => TokenType::TypeString,
+            "bool" => TokenType::TypeBool,
+            "null" => TokenType::TypeNull,
+            "list" => TokenType::TypeList,
+            "map" => TokenType::TypeMap,
+            "struct" => TokenType::TypeStruct,
+            "impl" => TokenType::TypeImpl,
+            "type" => TokenType::TypeAlias,
+            "true" => TokenType::BoolTrue,
+            "false" => TokenType::BoolFalse,
+            _ => {
+                if KEYWORDS.contains(&id_str.as_str()) {
+                    TokenType::Keyword
+                } else {
+                    TokenType::Identifier
+                }
+            }
         };
 
         Token::new(kind, Some(id_str), pos_start, Some(self.position.clone()))
