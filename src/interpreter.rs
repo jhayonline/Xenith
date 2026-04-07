@@ -236,20 +236,26 @@ impl Interpreter {
     ) -> RuntimeResult {
         let var_name = node.variable_name_token.value.as_ref().unwrap();
 
-        match context.symbol_table.get(var_name) {
+        // Walk up the context chain
+        let mut search: Option<&Context> = Some(context);
+        while let Some(ctx) = search {
+            if let Some(value) = ctx.symbol_table.get(var_name) {
+                return RuntimeResult::new().success(value.clone());
+            }
+            search = ctx.parent.as_deref();
+        }
+
+        match self.global_symbol_table.get(var_name) {
             Some(value) => RuntimeResult::new().success(value.clone()),
-            None => match self.global_symbol_table.get(var_name) {
-                Some(value) => RuntimeResult::new().success(value.clone()),
-                None => RuntimeResult::new().failure(
-                    RuntimeError::new(
-                        node.position_start.clone(),
-                        node.position_end.clone(),
-                        &format!("'{}' is not defined", var_name),
-                        Some(context.clone()),
-                    )
-                    .base,
-                ),
-            },
+            None => RuntimeResult::new().failure(
+                RuntimeError::new(
+                    node.position_start.clone(),
+                    node.position_end.clone(),
+                    &format!("'{}' is not defined", var_name),
+                    Some(context.clone()),
+                )
+                .base,
+            ),
         }
     }
 
@@ -581,116 +587,125 @@ impl Interpreter {
         let mut result = RuntimeResult::new();
         let mut elements = Vec::new();
 
-        // Parse the variable name to see if it's a tuple pattern (key, value)
-        let var_name = node.variable_name_token.value.as_ref().unwrap();
+        let raw_var_name = node.variable_name_token.value.as_ref().unwrap();
+        let var_name = raw_var_name.trim_matches(|c| c == '(' || c == ')');
 
-        // Evaluate the iterable
         let iterable = result.register(self.visit(&node.start_value_node, context));
         if result.should_return() {
             return result;
         }
 
-        // Handle collection iteration (List or Map)
         match &iterable {
             Value::List(list) => {
-                // Iterate over list elements
-                for item in &list.elements {
-                    context.symbol_table.set(var_name.to_string(), item.clone());
+                let is_pair_list = var_name.contains(',');
 
-                    let value = result.register(self.visit(&node.body_node, context));
+                if is_pair_list {
+                    let parts: Vec<String> =
+                        var_name.split(',').map(|s| s.trim().to_string()).collect();
+
+                    for item in &list.elements {
+                        if let Value::List(pair) = item {
+                            if pair.elements.len() == 2 && parts.len() == 2 {
+                                let mut loop_ctx = context.create_child("<for>", Self::dummy_pos());
+                                loop_ctx
+                                    .symbol_table
+                                    .set(parts[0].clone(), pair.elements[0].clone());
+                                loop_ctx
+                                    .symbol_table
+                                    .set(parts[1].clone(), pair.elements[1].clone());
+
+                                let loop_value =
+                                    result.register(self.visit(&node.body_node, &mut loop_ctx));
+                                if result.should_return()
+                                    && !result.loop_should_continue
+                                    && !result.loop_should_break
+                                {
+                                    return result;
+                                }
+                                if result.loop_should_continue {
+                                    result.loop_should_continue = false;
+                                    continue;
+                                }
+                                if result.loop_should_break {
+                                    result.loop_should_break = false;
+                                    break;
+                                }
+                                elements.push(loop_value);
+                            }
+                        }
+                    }
+                } else {
+                    for item in &list.elements {
+                        let mut loop_ctx = context.create_child("<for>", Self::dummy_pos());
+                        loop_ctx
+                            .symbol_table
+                            .set(var_name.to_string(), item.clone());
+
+                        let value = result.register(self.visit(&node.body_node, &mut loop_ctx));
+                        if result.should_return()
+                            && !result.loop_should_continue
+                            && !result.loop_should_break
+                        {
+                            return result;
+                        }
+                        if result.loop_should_continue {
+                            result.loop_should_continue = false;
+                            continue;
+                        }
+                        if result.loop_should_break {
+                            result.loop_should_break = false;
+                            break;
+                        }
+                        elements.push(value);
+                    }
+                }
+            }
+
+            Value::Map(map) => {
+                let parts: Option<Vec<String>> = if var_name.contains(',') {
+                    let p: Vec<String> =
+                        var_name.split(',').map(|s| s.trim().to_string()).collect();
+                    if p.len() == 2 { Some(p) } else { None }
+                } else {
+                    None
+                };
+
+                for (key_str, val) in &map.pairs {
+                    let mut loop_ctx = context.create_child("<for>", Self::dummy_pos());
+
+                    if let Some(ref p) = parts {
+                        loop_ctx.symbol_table.set(
+                            p[0].clone(),
+                            Value::String(XenithString::new(key_str.clone())),
+                        );
+                        loop_ctx.symbol_table.set(p[1].clone(), val.clone());
+                    } else {
+                        loop_ctx.symbol_table.set(
+                            var_name.to_string(),
+                            Value::String(XenithString::new(key_str.clone())),
+                        );
+                    }
+
+                    let loop_value = result.register(self.visit(&node.body_node, &mut loop_ctx));
                     if result.should_return()
                         && !result.loop_should_continue
                         && !result.loop_should_break
                     {
                         return result;
                     }
-
                     if result.loop_should_continue {
                         result.loop_should_continue = false;
                         continue;
                     }
-
                     if result.loop_should_break {
                         result.loop_should_break = false;
                         break;
                     }
-
-                    elements.push(value);
+                    elements.push(loop_value);
                 }
             }
-            Value::Map(map) => {
-                // Check if var_name is a tuple pattern like "(key, value)"
-                if var_name.contains(',') {
-                    // This is a tuple pattern - iterate over map items
-                    let items = map.items();
-                    for item in items.elements {
-                        if let Value::List(pair) = item {
-                            if pair.elements.len() == 2 {
-                                let key = &pair.elements[0];
-                                let value = &pair.elements[1];
 
-                                // Parse variable names (e.g., "key, value")
-                                let parts: Vec<&str> =
-                                    var_name.split(',').map(|s| s.trim()).collect();
-                                if parts.len() == 2 {
-                                    context.symbol_table.set(parts[0].to_string(), key.clone());
-                                    context
-                                        .symbol_table
-                                        .set(parts[1].to_string(), value.clone());
-                                }
-                            }
-                        }
-
-                        let value = result.register(self.visit(&node.body_node, context));
-                        if result.should_return()
-                            && !result.loop_should_continue
-                            && !result.loop_should_break
-                        {
-                            return result;
-                        }
-
-                        if result.loop_should_continue {
-                            result.loop_should_continue = false;
-                            continue;
-                        }
-
-                        if result.loop_should_break {
-                            result.loop_should_break = false;
-                            break;
-                        }
-
-                        elements.push(value);
-                    }
-                } else {
-                    // Iterate over keys
-                    let keys = map.keys();
-                    for key in keys.elements {
-                        context.symbol_table.set(var_name.to_string(), key.clone());
-
-                        let value = result.register(self.visit(&node.body_node, context));
-                        if result.should_return()
-                            && !result.loop_should_continue
-                            && !result.loop_should_break
-                        {
-                            return result;
-                        }
-
-                        if result.loop_should_continue {
-                            result.loop_should_continue = false;
-                            continue;
-                        }
-
-                        if result.loop_should_break {
-                            result.loop_should_break = false;
-                            break;
-                        }
-
-                        elements.push(value);
-                    }
-                }
-            }
             _ => {
-                // Regular numeric for loop
                 let start = iterable;
                 let end = result.register(self.visit(&node.end_value_node, context));
                 if result.should_return() {
@@ -703,7 +718,6 @@ impl Interpreter {
                     Value::Number(Number::new(1.0))
                 };
 
-                // Get start value
                 let start_val = match start.as_number() {
                     Some(n) => n.value,
                     None => {
@@ -718,8 +732,6 @@ impl Interpreter {
                         );
                     }
                 };
-
-                // Get end value
                 let end_val = match end.as_number() {
                     Some(n) => n.value,
                     None => {
@@ -734,8 +746,6 @@ impl Interpreter {
                         );
                     }
                 };
-
-                // Get step value
                 let step_val = match step.as_number() {
                     Some(n) => n.value,
                     None => {
@@ -757,29 +767,27 @@ impl Interpreter {
                 } else {
                     i > end_val
                 } {
-                    context
+                    let mut loop_ctx = context.create_child("<for>", Self::dummy_pos());
+                    loop_ctx
                         .symbol_table
                         .set(var_name.to_string(), Value::Number(Number::new(i)));
 
-                    let value = result.register(self.visit(&node.body_node, context));
+                    let value = result.register(self.visit(&node.body_node, &mut loop_ctx));
                     if result.should_return()
                         && !result.loop_should_continue
                         && !result.loop_should_break
                     {
                         return result;
                     }
-
                     if result.loop_should_continue {
                         result.loop_should_continue = false;
                         i += step_val;
                         continue;
                     }
-
                     if result.loop_should_break {
                         result.loop_should_break = false;
                         break;
                     }
-
                     elements.push(value);
                     i += step_val;
                 }

@@ -51,6 +51,22 @@ impl SymbolTable {
     pub fn remove(&mut self, name: &str) -> Option<Value> {
         self.symbols.remove(name)
     }
+
+    /// Updates a variable in the scope it was originally defined, or sets in current scope if not found
+    pub fn set_existing(&mut self, name: String, value: Value) {
+        if self.symbols.contains_key(&name) {
+            self.symbols.insert(name, value);
+        } else if let Some(parent) = &mut self.parent {
+            parent.set_existing(name, value);
+        } else {
+            self.symbols.insert(name, value);
+        }
+    }
+
+    pub fn set_local(&mut self, name: String, value: Value) {
+        // Explicitly set ONLY in this table's own HashMap, never in parent
+        self.symbols.insert(name, value);
+    }
 }
 
 impl Default for SymbolTable {

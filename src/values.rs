@@ -921,30 +921,40 @@ impl Map {
     }
 
     pub fn items(&self) -> List {
-        let mut items = Vec::new();
-        for (key, value) in &self.pairs {
-            items.push(Value::List(List::new(vec![
-                Value::String(XenithString::new(key.clone())),
-                value.clone(),
-            ])));
-        }
+        let mut pairs: Vec<(&String, &Value)> = self.pairs.iter().collect();
+        pairs.sort_by(|a, b| a.0.cmp(b.0));
+
+        let items = pairs
+            .into_iter()
+            .map(|(key, value)| {
+                Value::List(List::new(vec![
+                    Value::String(XenithString::new(key.clone())),
+                    value.clone(),
+                ]))
+            })
+            .collect();
+
         List::new(items)
     }
 
     pub fn keys(&self) -> List {
-        let mut keys = Vec::new();
-        for key in self.pairs.keys() {
-            keys.push(Value::String(XenithString::new(key.clone())));
+        let mut keys: Vec<String> = self.pairs.keys().cloned().collect();
+        keys.sort();
+        let mut result = Vec::new();
+        for key in keys {
+            result.push(Value::String(XenithString::new(key)));
         }
-        List::new(keys)
+        List::new(result)
     }
 
     pub fn values(&self) -> List {
-        let mut values = Vec::new();
-        for value in self.pairs.values() {
-            values.push(value.clone());
+        let mut values: Vec<(&String, &Value)> = self.pairs.iter().collect();
+        values.sort_by(|a, b| a.0.cmp(b.0));
+        let mut result = Vec::new();
+        for (_, value) in values {
+            result.push(value.clone());
         }
-        List::new(values)
+        List::new(result)
     }
 }
 
