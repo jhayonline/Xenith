@@ -8,7 +8,7 @@ use crate::nodes::*;
 use crate::parse_result::ParseResult;
 use crate::position::Position;
 use crate::tokens::{Token, TokenType};
-use crate::types::Type;
+use crate::types::{FunctionType, Type};
 
 /// Recursive descent parser for Xenith
 #[derive(Debug)]
@@ -88,7 +88,7 @@ impl Parser {
     }
 
     /// Parse a type annotation
-    /// Syntax: int | float | string | bool | null | list<T> | map<K, V> | identifier
+    /// Syntax: int | float | string | bool | null | list<T> | map<K, V> | identifier | method(...) -> ...
     fn parse_type(&mut self) -> ParseResult {
         let mut result = ParseResult::new();
         let type_token = match self.current_token() {
@@ -101,6 +101,134 @@ impl Parser {
             }
         };
 
+        // Handle function type separately (returns ParseResult directly)
+        if type_token.matches(TokenType::Keyword, Some("method")) {
+            self.advance(); // consume 'method'
+
+            // Expect '('
+            match self.current_token() {
+                Some(t) if t.kind == TokenType::LParen => {
+                    self.advance();
+                }
+                Some(t) => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            t.position_start.clone(),
+                            t.position_end.clone(),
+                            "Expected '(' after 'method'",
+                        )
+                        .base,
+                    );
+                }
+                None => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "Expected '(' after 'method'",
+                        )
+                        .base,
+                    );
+                }
+            }
+
+            let mut param_types = Vec::new();
+
+            // Parse parameter types (no names, just types)
+            // Check if empty parameter list
+            if let Some(t) = self.current_token() {
+                if t.kind != TokenType::RParen {
+                    // Parse first parameter type
+                    let param_type = result.register_type(&self.parse_type());
+                    if result.error.is_some() {
+                        return result;
+                    }
+                    param_types.push(param_type);
+
+                    // Parse additional parameters separated by commas
+                    while let Some(comma) = self.current_token() {
+                        if comma.kind == TokenType::Comma {
+                            self.advance(); // consume ','
+
+                            let next_param = result.register_type(&self.parse_type());
+                            if result.error.is_some() {
+                                return result;
+                            }
+                            param_types.push(next_param);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Expect ')'
+            match self.current_token() {
+                Some(t) if t.kind == TokenType::RParen => {
+                    self.advance();
+                }
+                Some(t) => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            t.position_start.clone(),
+                            t.position_end.clone(),
+                            "Expected ')'",
+                        )
+                        .base,
+                    );
+                }
+                None => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "Expected ')'",
+                        )
+                        .base,
+                    );
+                }
+            }
+
+            // Expect '->'
+            match self.current_token() {
+                Some(t) if t.kind == TokenType::Arrow => {
+                    self.advance();
+                }
+                Some(t) => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            t.position_start.clone(),
+                            t.position_end.clone(),
+                            "Expected '->'",
+                        )
+                        .base,
+                    );
+                }
+                None => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            Self::dummy_pos(),
+                            Self::dummy_pos(),
+                            "Expected '->'",
+                        )
+                        .base,
+                    );
+                }
+            }
+
+            // Parse return type
+            let return_type = result.register_type(&self.parse_type());
+            if result.error.is_some() {
+                return result;
+            }
+
+            return result.success_type(Type::Function(FunctionType {
+                param_types,
+                return_type: Box::new(return_type),
+            }));
+        }
+
+        // Handle all other types (same as before)
         let parsed_type = match type_token.kind {
             TokenType::TypeInt => Type::Int,
             TokenType::TypeFloat => Type::Float,
@@ -385,9 +513,22 @@ impl Parser {
             .unwrap_or_else(Self::dummy_pos);
 
         // Check for match statement FIRST (before other checks)
+        // // Check for type alias
+        if let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::TypeAlias {
+                return self.type_alias();
+            }
+        }
         if let Some(tok) = self.current_token() {
             if tok.matches(TokenType::Keyword, Some("match")) {
                 return self.match_expr();
+            }
+        }
+
+        // Check for type alias
+        if let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::TypeAlias {
+                return self.type_alias();
             }
         }
 
@@ -597,6 +738,81 @@ impl Parser {
                 InvalidSyntaxError::new(pos_start.clone(), pos_start, "Invalid block").base,
             )
         }
+    }
+
+    fn type_alias(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+        let pos_start = self.current_token().unwrap().position_start.clone();
+
+        // Consume 'type'
+        self.advance();
+
+        // Parse the alias name
+        let name = match self.current_token() {
+            Some(t) if t.kind == TokenType::Identifier => t.clone(),
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected type alias name",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        Self::dummy_pos(),
+                        Self::dummy_pos(),
+                        "Expected type alias name",
+                    )
+                    .base,
+                );
+            }
+        };
+        self.advance();
+
+        // Expect '='
+        match self.current_token() {
+            Some(t) if t.kind == TokenType::Eq => {
+                self.advance();
+            }
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected '='",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(Self::dummy_pos(), Self::dummy_pos(), "Expected '='")
+                        .base,
+                );
+            }
+        }
+
+        // Parse the target type
+        let alias_type = result.register_type(&self.parse_type());
+        if result.error.is_some() {
+            return result;
+        }
+
+        let pos_end = self
+            .current_token()
+            .map(|t| t.position_end.clone())
+            .unwrap_or(pos_start.clone());
+
+        result.success(Node::TypeAlias(Box::new(TypeAliasNode {
+            name,
+            alias_type,
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
     }
 
     fn try_parse_field_access(&mut self) -> Option<Node> {

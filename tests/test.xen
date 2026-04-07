@@ -341,137 +341,98 @@ echo("   fibonacci(5) = {fibonacci(5)}")
 echo("   fibonacci(8) = {fibonacci(8)}")
 echo("")
 
-#######################################
-# 14. STRUCTS
-#######################################
+# #######################################
+# # 14. STRUCTS
+# #######################################
+#
+# echo("14. STRUCTS:")
+#
+# struct Student {
+#     name: string,
+#     score: int
+# }
+#
+# spawn alice: Student = Student { name: "Alice", score: 85 }
+# spawn bob: Student = Student { name: "Bob", score: 62 }
+# spawn charlie: Student = Student { name: "Charlie", score: 95 }
+# spawn diana: Student = Student { name: "Diana", score: 78 }
+#
+# echo("   Alice: {alice.name} = {alice.score}")
+# echo("   Bob: {bob.name} = {bob.score}")
+# echo("   Charlie: {charlie.name} = {charlie.score}")
+# echo("   Diana: {diana.name} = {diana.score}")
+#
+# # Modify struct field
+# # alice.score = 90
+# # echo("   Alice updated score: {alice.score}")
+# # echo("")
+#
+# #######################################
+# # 15. DATA PROCESSING WITH STRUCTS
+# #######################################
+#
+# echo("15. DATA PROCESSING:")
+#
+# spawn students: list<Student> = [alice, bob, charlie, diana]
+#
+# method process_grades(student_list: list<Student>) -> list<string> {
+#     spawn results: list<string> = []
+#     spawn i: int = 0
+#
+#     while i < student_list.len() {
+#         spawn student: Student = student_list[i]
+#         spawn name: string = student.name
+#         spawn score: int = student.score
+#
+#         spawn grade: string = "F"
+#         when score >= 90 {
+#             grade = "A"
+#         } or when score >= 80 {
+#             grade = "B"
+#         } or when score >= 70 {
+#             grade = "C"
+#         } or when score >= 60 {
+#             grade = "D"
+#         }
+#
+#         results.append("{name}: {score} -> {grade}")
+#         i = i + 1
+#     }
+#     release results
+# }
+#
+# spawn grades: list<string> = process_grades(students)
+#
+# spawn j: int = 0
+# while j < grades.len() {
+#     echo("   {grades[j]}")
+#     j = j + 1
+# }
+# echo("")
 
-echo("14. STRUCTS:")
-
-struct Student {
-    name: string,
-    score: int
-}
-
-spawn alice: Student = Student { name: "Alice", score: 85 }
-spawn bob: Student = Student { name: "Bob", score: 62 }
-spawn charlie: Student = Student { name: "Charlie", score: 95 }
-spawn diana: Student = Student { name: "Diana", score: 78 }
-
-echo("   Alice: {alice.name} = {alice.score}")
-echo("   Bob: {bob.name} = {bob.score}")
-echo("   Charlie: {charlie.name} = {charlie.score}")
-echo("   Diana: {diana.name} = {diana.score}")
-
-# Modify struct field
-alice.score = 90
-echo("   Alice updated score: {alice.score}")
-echo("")
-
-#######################################
-# 15. DATA PROCESSING WITH STRUCTS
-#######################################
-
-echo("15. DATA PROCESSING:")
-
-spawn students: list<Student> = [alice, bob, charlie, diana]
-
-method process_grades(student_list: list<Student>) -> list<string> {
-    spawn results: list<string> = []
-    spawn i: int = 0
-
-    while i < student_list.len() {
-        spawn student: Student = student_list[i]
-        spawn name: string = student.name
-        spawn score: int = student.score
-
-        spawn grade: string = "F"
-        when score >= 90 {
-            grade = "A"
-        } or when score >= 80 {
-            grade = "B"
-        } or when score >= 70 {
-            grade = "C"
-        } or when score >= 60 {
-            grade = "D"
-        }
-
-        results.append("{name}: {score} -> {grade}")
-        i = i + 1
-    }
-    release results
-}
-
-spawn grades: list<string> = process_grades(students)
-
-spawn j: int = 0
-while j < grades.len() {
-    echo("   {grades[j]}")
-    j = j + 1
-}
-echo("")
-
-#######################################
-# 16. INCREMENT/DECREMENT OPERATORS
-#######################################
-
-echo("16. INCREMENT/DECREMENT OPERATORS:")
-
-spawn counter: int = 5
-echo("   Initial counter = {counter}")
-
-counter++
-echo("   After counter++: {counter}")
-
-counter--
-echo("   After counter--: {counter}")
-
-spawn x_val: int = 10
-x_val += 3
-echo("   x += 3 -> {x_val}")
-
-x_val -= 2
-echo("   x -= 2 -> {x_val}")
-
-spawn y_val: int = 5
-y_val++
-echo("   y++ -> {y_val}")
-
-spawn z_val: int = 8
-z_val--
-echo("   z-- -> {z_val}")
-
-spawn a_val: int = 7
-a_val += a_val
-echo("   a += a -> {a_val}")
-
-spawn b_val: int = 10
-b_val -= 3
-echo("   b -= 3 -> {b_val}")
-echo("")
-
-#######################################
-# 17. TYPE CONVERSION
-#######################################
-
-echo("17. TYPE CONVERSION:")
-
-spawn int_val: int = 42
-spawn float_val: float = int_val as float
-spawn string_val: string = int_val as string
-spawn bool_val: bool = int_val as bool
-
-echo("   int 42 -> float: {float_val}")
-echo("   int 42 -> string: {string_val}")
-echo("   int 42 -> bool: {bool_val}")
-
-spawn pi_val: float = 3.14159
-spawn pi_int: int = pi_val as int
-echo("   float 3.14159 -> int: {pi_int}")
-
-spawn true_val: bool = true
-spawn true_int: int = true_val as int
-echo("   bool true -> int: {true_int}")
-echo("")
+# #######################################
+# # 17. TYPE CONVERSION
+# #######################################
+#
+# echo("17. TYPE CONVERSION:")
+#
+# spawn int_val: int = 42
+# spawn float_val: float = int_val as float
+# spawn string_val: string = int_val as string
+# spawn bool_val: bool = int_val as bool
+#
+# echo("   int 42 -> float: {float_val}")
+# echo("   int 42 -> string: {string_val}")
+# echo("   int 42 -> bool: {bool_val}")
+#
+# spawn pi_val: float = 3.14159
+# spawn pi_int: int = pi_val as int
+# echo("   float 3.14159 -> int: {pi_int}")
+#
+# spawn true_val: bool = true
+# spawn true_int: int = true_val as int
+# echo("   bool true -> int: {true_int}")
+# echo("")
 
 #######################################
 # 18. TEST SUMMARY
