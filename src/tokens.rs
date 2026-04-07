@@ -112,4 +112,7 @@ pub const KEYWORDS: &[&str] = &[
     "stop",
     "match",
     "in",
+    "try",
+    "catch",
+    "panic",
 ];

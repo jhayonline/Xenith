@@ -311,6 +311,117 @@ impl Parser {
         self.ternary_expr()
     }
 
+    fn try_catch_expr(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+        let pos_start = self.current_token().unwrap().position_start.clone();
+
+        // Consume 'try'
+        self.advance();
+
+        // Parse try block (must be { ... })
+        let try_block = result.register(&self.block());
+        if result.error.is_some() {
+            return result;
+        }
+
+        // Expect 'catch'
+        match self.current_token() {
+            Some(t) if t.matches(TokenType::Keyword, Some("catch")) => {
+                self.advance();
+            }
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected 'catch'",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        Self::dummy_pos(),
+                        Self::dummy_pos(),
+                        "Expected 'catch'",
+                    )
+                    .base,
+                );
+            }
+        }
+
+        // Parse catch variable (identifier)
+        let catch_var = match self.current_token() {
+            Some(t) if t.kind == TokenType::Identifier => t.clone(),
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected identifier for catch variable",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        Self::dummy_pos(),
+                        Self::dummy_pos(),
+                        "Expected identifier for catch variable",
+                    )
+                    .base,
+                );
+            }
+        };
+        self.advance();
+
+        // Parse catch block
+        let catch_block = result.register(&self.block());
+        if result.error.is_some() {
+            return result;
+        }
+
+        let pos_end = self
+            .current_token()
+            .map(|t| t.position_end.clone())
+            .unwrap_or(pos_start.clone());
+
+        result.success(Node::TryCatch(Box::new(TryCatchNode {
+            try_block: Box::new(try_block.unwrap()),
+            catch_var,
+            catch_block: Box::new(catch_block.unwrap()),
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
+    }
+
+    fn panic_expr(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+        let pos_start = self.current_token().unwrap().position_start.clone();
+
+        // Consume 'panic'
+        self.advance();
+
+        // Parse message expression
+        let message = result.register(&self.expr());
+        if result.error.is_some() {
+            return result;
+        }
+
+        let pos_end = message
+            .as_ref()
+            .map(|n| n.position_end().clone())
+            .unwrap_or(pos_start.clone());
+
+        result.success(Node::Panic(Box::new(PanicNode {
+            message_node: Box::new(message.unwrap()),
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
+    }
+
     // Compound assignment (+=, -=)
     fn compound_assignment(&mut self, op: TokenType) -> ParseResult {
         let mut result = ParseResult::new();
@@ -1789,6 +1900,12 @@ impl Parser {
                 }
                 _ if tok.matches(TokenType::Keyword, Some("match")) => {
                     return self.match_expr();
+                }
+                _ if tok.matches(TokenType::Keyword, Some("try")) => {
+                    return self.try_catch_expr();
+                }
+                _ if tok.matches(TokenType::Keyword, Some("panic")) => {
+                    return self.panic_expr();
                 }
                 _ => {}
             },

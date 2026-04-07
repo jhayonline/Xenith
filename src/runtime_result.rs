@@ -5,7 +5,7 @@
 //! control flow at runtime.
 
 use crate::error::Error;
-use crate::values::Value;
+use crate::values::{CaughtError, Value};
 
 /// Result of runtime execution with control flow tracking
 #[derive(Debug, Clone)]
@@ -15,6 +15,7 @@ pub struct RuntimeResult {
     pub func_return_value: Option<Value>,
     pub loop_should_continue: bool,
     pub loop_should_break: bool,
+    pub caught_error: Option<CaughtError>,
 }
 
 impl RuntimeResult {
@@ -26,6 +27,7 @@ impl RuntimeResult {
             func_return_value: None,
             loop_should_continue: false,
             loop_should_break: false,
+            caught_error: None,
         }
     }
 
@@ -35,10 +37,10 @@ impl RuntimeResult {
         self.func_return_value = res.func_return_value.take();
         self.loop_should_continue = res.loop_should_continue;
         self.loop_should_break = res.loop_should_break;
+        self.caught_error = res.caught_error.take(); // Add this line!
 
-        // If there's an error or return value, we shouldn't try to get the value
-        if self.error.is_some() || self.func_return_value.is_some() {
-            // Return a dummy value since we won't use it
+        // If there's an error, return value, or panic, we shouldn't try to get the value
+        if self.error.is_some() || self.func_return_value.is_some() || self.caught_error.is_some() {
             return Value::Number(crate::values::Number::null());
         }
 
@@ -82,6 +84,15 @@ impl RuntimeResult {
             || self.func_return_value.is_some()
             || self.loop_should_continue
             || self.loop_should_break
+    }
+
+    pub fn success_catch(mut self, error: CaughtError) -> Self {
+        self.caught_error = Some(error);
+        self
+    }
+
+    pub fn is_panic(&self) -> bool {
+        self.caught_error.is_some()
     }
 }
 

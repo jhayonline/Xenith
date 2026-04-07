@@ -7,13 +7,15 @@
 use crate::context::Context;
 use crate::error::RuntimeError;
 use crate::lexer::Lexer;
-use crate::nodes::Node;
+use crate::nodes::{Node, PanicNode, TryCatchNode};
 use crate::parser::Parser;
 use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
 use crate::symbol_table::SymbolTable;
-use crate::utils::value_to_interpolated_string;
-use crate::values::{BuiltInFunction, Function, List, Map, Number, Value, XenithString};
+use crate::utils::{value_to_interpolated_string, value_to_string};
+use crate::values::{
+    BuiltInFunction, CaughtError, Function, List, Map, Number, Value, XenithString,
+};
 
 /// Main interpreter that traverses and executes the AST
 pub struct Interpreter {
@@ -118,6 +120,8 @@ impl Interpreter {
             Node::MethodAccess(n) => self.visit_method_access(n, context),
             Node::Match(n) => self.visit_match(n, context),
             Node::Map(n) => self.visit_map(n, context),
+            Node::TryCatch(n) => self.visit_try_catch(n, context),
+            Node::Panic(n) => self.visit_panic(n, context),
         }
     }
 
@@ -151,16 +155,30 @@ impl Interpreter {
     ) -> RuntimeResult {
         let mut result = RuntimeResult::new();
         let mut elements = Vec::new();
+        let mut last_value = Value::Number(Number::null());
 
         for elem_node in &node.element_nodes {
-            let elem = result.register(self.visit(elem_node, context));
+            let elem_result = self.visit(elem_node, context);
+
+            // Check if this result has a caught error (panic)
+            if elem_result.caught_error.is_some() {
+                return elem_result; // Propagate the panic up
+            }
+
+            let elem = result.register(elem_result);
             if result.should_return() {
                 return result;
             }
-            elements.push(elem);
+            elements.push(elem.clone());
+            last_value = elem;
         }
 
-        result.success(Value::List(List::new(elements)))
+        // Return the last value, or null if empty
+        if elements.is_empty() {
+            result.success(Value::Number(Number::null()))
+        } else {
+            result.success(last_value)
+        }
     }
 
     fn visit_map(&mut self, node: &crate::nodes::MapNode, context: &mut Context) -> RuntimeResult {
@@ -369,6 +387,66 @@ impl Interpreter {
             Ok(v) => result.success(v),
             Err(e) => RuntimeResult::new().failure(e),
         }
+    }
+
+    fn visit_try_catch(&mut self, node: &TryCatchNode, context: &mut Context) -> RuntimeResult {
+        let mut result = RuntimeResult::new();
+
+        // Create a new context for the try block
+        let mut try_context = context.create_child("<try>", node.position_start.clone());
+
+        // Execute try block
+        let try_result = self.visit(&node.try_block, &mut try_context);
+
+        // Check if there was a caught error (from panic)
+        if let Some(caught) = try_result.caught_error {
+            // Execute catch block with error variable
+            let mut catch_context = context.create_child("<catch>", node.position_start.clone());
+            catch_context.symbol_table.set_local(
+                node.catch_var.value.as_ref().unwrap().clone(),
+                Value::String(XenithString::new(caught.message)),
+            );
+
+            return self.visit(&node.catch_block, &mut catch_context);
+        }
+
+        // Check if there was a runtime error
+        if let Some(error) = try_result.error {
+            // Create caught error value
+            let error_message = format!("{}: {}", error.error_name, error.details);
+            let caught_error = CaughtError {
+                message: error_message,
+            };
+
+            // Execute catch block with error variable
+            let mut catch_context = context.create_child("<catch>", node.position_start.clone());
+            catch_context.symbol_table.set_local(
+                node.catch_var.value.as_ref().unwrap().clone(),
+                Value::String(XenithString::new(caught_error.message.clone())),
+            );
+
+            return self.visit(&node.catch_block, &mut catch_context);
+        }
+
+        // No error, return try block result
+        try_result
+    }
+
+    fn visit_panic(&mut self, node: &PanicNode, context: &mut Context) -> RuntimeResult {
+        let mut result = RuntimeResult::new();
+        let message_value = result.register(self.visit(&node.message_node, context));
+
+        if result.should_return() {
+            return result;
+        }
+
+        let message = value_to_string(&message_value);
+        let caught_error = CaughtError { message };
+
+        // Return with caught error and also mark that we should return
+        let mut panic_result = RuntimeResult::new();
+        panic_result.caught_error = Some(caught_error);
+        panic_result // Don't call success_catch, just return the error
     }
 
     fn visit_interpolated_string(

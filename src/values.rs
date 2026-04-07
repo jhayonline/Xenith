@@ -965,3 +965,8 @@ impl Default for Map {
         Self::new()
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct CaughtError {
+    pub message: String,
+}

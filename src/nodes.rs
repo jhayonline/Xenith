@@ -31,6 +31,8 @@ pub enum Node {
     MethodAccess(MethodAccessNode),
     Match(Box<MatchNode>),
     Map(MapNode),
+    TryCatch(Box<TryCatchNode>),
+    Panic(Box<PanicNode>),
 }
 
 impl Node {
@@ -56,6 +58,8 @@ impl Node {
             Node::MethodAccess(n) => &n.position_start,
             Node::Match(n) => &n.position_start,
             Node::Map(n) => &n.position_start,
+            Node::TryCatch(n) => &n.position_start,
+            Node::Panic(n) => &n.position_start,
         }
     }
 
@@ -81,6 +85,8 @@ impl Node {
             Node::MethodAccess(n) => &n.position_end,
             Node::Match(n) => &n.position_end,
             Node::Map(n) => &n.position_end,
+            Node::TryCatch(n) => &n.position_end,
+            Node::Panic(n) => &n.position_end,
         }
     }
 
@@ -333,6 +339,24 @@ pub struct MapNode {
 pub struct MapPair {
     pub key_node: Box<Node>,
     pub value_node: Box<Node>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+// Try-catch node
+#[derive(Debug, Clone)]
+pub struct TryCatchNode {
+    pub try_block: Box<Node>,
+    pub catch_var: Token, // The error variable name
+    pub catch_block: Box<Node>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+// Panic node
+#[derive(Debug, Clone)]
+pub struct PanicNode {
+    pub message_node: Box<Node>,
     pub position_start: Position,
     pub position_end: Position,
 }
