@@ -1,0 +1,51 @@
+# Test typed variable declarations
+spawn age: int = 25
+spawn price: float = 19.99
+spawn name: string = "Alice"
+spawn is_active: bool = true
+
+# Test const spawn
+const spawn MAX_SIZE: int = 100
+
+# Test lists with types
+spawn numbers: list<int> = [1, 2, 3, 4, 5]
+spawn names: list<string> = ["Alice", "Bob", "Charlie"]
+
+# Test maps with types - use double quotes for keys
+spawn user: map<string, int> = {"age": 25}
+spawn scores: map<string, list<int>> = {"Alice": [100, 95, 90]}
+
+# Test typed function
+method add(a: int, b: int) -> int {
+    release a + b
+}
+
+# Test arrow function with types
+method double(x: int) -> int => x * 2
+
+# Test void function (returns null)
+method greet(name: string) -> null {
+    echo("Hello, {name}!")
+    release null
+}
+
+# Test usage
+echo("age: {age}")
+echo("price: {price}")
+echo("name: {name}")
+echo("is_active: {is_active}")
+echo("MAX_SIZE: {MAX_SIZE}")
+
+echo("Numbers: {ret(numbers)}")
+echo("First number: {numbers[0]}")
+
+# Use double quotes for map key
+echo("User age: {user["age"]}")
+
+spawn sum: int = add(10, 20)
+echo("10 + 20 = {sum}")
+
+spawn doubled: int = double(7)
+echo("7 * 2 = {doubled}")
+
+greet("World")

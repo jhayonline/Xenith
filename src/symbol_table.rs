@@ -4,6 +4,7 @@
 //! Manages the mapping between identifiers and their runtime values
 //! during program execution.
 
+use crate::types::Type;
 use crate::values::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,6 +14,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub struct SymbolTable {
     symbols: Rc<RefCell<HashMap<String, Value>>>,
+    types: Rc<RefCell<HashMap<String, Type>>>,
     parent: Option<Rc<SymbolTable>>,
 }
 
@@ -21,6 +23,7 @@ impl SymbolTable {
     pub fn new() -> Self {
         Self {
             symbols: Rc::new(RefCell::new(HashMap::new())),
+            types: Rc::new(RefCell::new(HashMap::new())),
             parent: None,
         }
     }
@@ -29,6 +32,7 @@ impl SymbolTable {
     pub fn with_parent(parent: Rc<SymbolTable>) -> Self {
         Self {
             symbols: Rc::new(RefCell::new(HashMap::new())),
+            types: Rc::new(RefCell::new(HashMap::new())),
             parent: Some(parent),
         }
     }
@@ -42,6 +46,20 @@ impl SymbolTable {
         } else {
             None
         }
+    }
+
+    pub fn get_type(&self, name: &str) -> Option<Type> {
+        if let Some(typ) = self.types.borrow().get(name) {
+            Some(typ.clone())
+        } else if let Some(parent) = &self.parent {
+            parent.get_type(name)
+        } else {
+            None
+        }
+    }
+
+    pub fn set_type(&mut self, name: String, typ: Type) {
+        self.types.borrow_mut().insert(name, typ);
     }
 
     /// Sets a value in the current symbol table

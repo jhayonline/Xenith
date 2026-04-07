@@ -8,7 +8,10 @@ use crate::context::Context;
 use crate::error::RuntimeError;
 use crate::lexer::Lexer;
 use crate::modules::{Module, ModuleRegistry};
-use crate::nodes::{Node, PanicNode, TryCatchNode};
+use crate::nodes::{
+    BoolLiteralNode, ImplNode, Node, NullLiteralNode, PanicNode, StructDefNode, TryCatchNode,
+    TypeAliasNode,
+};
 use crate::parser::Parser;
 use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
@@ -152,7 +155,48 @@ impl Interpreter {
             Node::Panic(n) => self.visit_panic(n, context),
             Node::Grab(n) => self.visit_grab(n, context),
             Node::Export(n) => self.visit_export(n, context),
+            Node::StructDef(n) => self.visit_struct_def(n, context),
+            Node::Impl(n) => self.visit_impl(n, context),
+            Node::TypeAlias(n) => self.visit_type_alias(n, context),
+            Node::BoolLiteral(n) => self.visit_bool_literal(n, context),
+            Node::NullLiteral(n) => self.visit_null_literal(n, context),
         }
+    }
+
+    fn visit_struct_def(&mut self, node: &StructDefNode, context: &mut Context) -> RuntimeResult {
+        // TODO: Implement struct definition
+        RuntimeResult::new().success(Value::Number(Number::null()))
+    }
+
+    fn visit_impl(&mut self, node: &ImplNode, context: &mut Context) -> RuntimeResult {
+        // TODO: Implement impl block
+        RuntimeResult::new().success(Value::Number(Number::null()))
+    }
+
+    fn visit_type_alias(&mut self, node: &TypeAliasNode, context: &mut Context) -> RuntimeResult {
+        // TODO: Implement type alias
+        RuntimeResult::new().success(Value::Number(Number::null()))
+    }
+
+    fn visit_null_literal(
+        &mut self,
+        node: &NullLiteralNode,
+        _context: &mut Context,
+    ) -> RuntimeResult {
+        RuntimeResult::new().success(Value::Number(Number::null()))
+    }
+
+    fn visit_bool_literal(
+        &mut self,
+        node: &BoolLiteralNode,
+        _context: &mut Context,
+    ) -> RuntimeResult {
+        let value = if node.value {
+            Value::Number(Number::true_val())
+        } else {
+            Value::Number(Number::false_val())
+        };
+        RuntimeResult::new().success(value)
     }
 
     fn visit_export(
@@ -270,30 +314,17 @@ impl Interpreter {
     ) -> RuntimeResult {
         let mut result = RuntimeResult::new();
         let mut elements = Vec::new();
-        let mut last_value = Value::Number(Number::null());
 
         for elem_node in &node.element_nodes {
-            let elem_result = self.visit(elem_node, context);
-
-            // Check if this result has a caught error (panic)
-            if elem_result.caught_error.is_some() {
-                return elem_result; // Propagate the panic up
-            }
-
-            let elem = result.register(elem_result);
+            let elem = result.register(self.visit(elem_node, context));
             if result.should_return() {
                 return result;
             }
-            elements.push(elem.clone());
-            last_value = elem;
+            elements.push(elem);
         }
 
-        // Return the last value, or null if empty
-        if elements.is_empty() {
-            result.success(Value::Number(Number::null()))
-        } else {
-            result.success(last_value)
-        }
+        // Return the list, not the last value
+        result.success(Value::List(List::new(elements)))
     }
 
     fn visit_map(&mut self, node: &crate::nodes::MapNode, context: &mut Context) -> RuntimeResult {
@@ -1034,8 +1065,10 @@ impl Interpreter {
             .variable_name_token
             .as_ref()
             .map(|t| t.value.as_ref().unwrap().clone());
+
+        // Convert param names to strings
         let arg_names: Vec<String> = node
-            .arg_name_toks
+            .param_names
             .iter()
             .map(|t| t.value.as_ref().unwrap().clone())
             .collect();
@@ -1044,7 +1077,7 @@ impl Interpreter {
             func_name.clone(),
             *node.body_node.clone(),
             arg_names,
-            node.should_auto_return,
+            node.is_arrow, // Arrow functions auto-return
         );
 
         let func_value = Value::Function(Box::new(func));

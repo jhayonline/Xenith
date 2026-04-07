@@ -6,12 +6,14 @@
 
 use crate::error::Error;
 use crate::nodes::Node;
+use crate::types::Type;
 
 /// Result of a parsing operation with error tracking
 #[derive(Debug, Clone)]
 pub struct ParseResult {
     pub error: Option<Error>,
     pub node: Option<Node>,
+    pub parsed_type: Option<Type>,
     pub last_registered_advance_count: usize,
     pub advance_count: usize,
     pub to_reverse_count: usize,
@@ -23,6 +25,7 @@ impl ParseResult {
         Self {
             error: None,
             node: None,
+            parsed_type: None,
             last_registered_advance_count: 0,
             advance_count: 0,
             to_reverse_count: 0,
@@ -68,6 +71,27 @@ impl ParseResult {
         if self.error.is_none() || self.last_registered_advance_count == 0 {
             self.error = Some(error);
         }
+        self
+    }
+
+    pub fn register_type(&mut self, res: &ParseResult) -> Type {
+        self.last_registered_advance_count = res.advance_count;
+        self.advance_count += res.advance_count;
+
+        if let Some(err) = &res.error {
+            self.error = Some(err.clone());
+        }
+
+        res.parsed_type.clone().unwrap_or(Type::Unknown)
+    }
+
+    pub fn success_type(mut self, typ: Type) -> Self {
+        self.parsed_type = Some(typ);
+        self
+    }
+
+    pub fn success_node_with_type(mut self, node: Node) -> Self {
+        self.node = Some(node);
         self
     }
 }

@@ -36,6 +36,19 @@ pub enum TokenType {
     Lte, // <=
     Gte, // >=
 
+    TypeInt,
+    TypeFloat,
+    TypeString,
+    TypeBool,
+    TypeNull,
+    TypeList,
+    TypeMap,
+    TypeStruct,
+    TypeImpl,
+    TypeAlias,
+    BoolTrue,
+    BoolFalse,
+
     // Delimiters
     LParen,
     RParen,
@@ -44,6 +57,7 @@ pub enum TokenType {
     LBrace,
     RBrace,
     Question,
+    FatArrow, // =>
     Colon,
     Comma,
     Dot,   // . for method calls
@@ -96,6 +110,7 @@ impl Token {
 /// Reserved keywords in the Xenith language
 pub const KEYWORDS: &[&str] = &[
     "spawn",
+    "const",
     "&&",
     "||",
     "!",
@@ -119,4 +134,16 @@ pub const KEYWORDS: &[&str] = &[
     "export",
     "as",
     "from",
+    "int",
+    "float",
+    "string",
+    "bool",
+    "null",
+    "list",
+    "map",
+    "struct",
+    "impl",
+    "type",
+    "true",
+    "false",
 ];

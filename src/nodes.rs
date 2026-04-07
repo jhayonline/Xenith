@@ -7,6 +7,7 @@
 
 use crate::position::Position;
 use crate::tokens::Token;
+use crate::types::Type;
 
 /// All possible AST node types
 #[derive(Debug, Clone)]
@@ -35,6 +36,11 @@ pub enum Node {
     Panic(Box<PanicNode>),
     Grab(Box<GrabNode>),
     Export(Box<ExportNode>),
+    StructDef(Box<StructDefNode>),
+    Impl(Box<ImplNode>),
+    TypeAlias(Box<TypeAliasNode>),
+    BoolLiteral(BoolLiteralNode),
+    NullLiteral(NullLiteralNode),
 }
 
 impl Node {
@@ -64,6 +70,11 @@ impl Node {
             Node::Panic(n) => &n.position_start,
             Node::Grab(n) => &n.position_start,
             Node::Export(n) => &n.position_start,
+            Node::StructDef(n) => &n.position_start,
+            Node::Impl(n) => &n.position_start,
+            Node::TypeAlias(n) => &n.position_start,
+            Node::BoolLiteral(n) => &n.position_start,
+            Node::NullLiteral(n) => &n.position_start,
         }
     }
 
@@ -93,6 +104,11 @@ impl Node {
             Node::Panic(n) => &n.position_end,
             Node::Grab(n) => &n.position_end,
             Node::Export(n) => &n.position_end,
+            Node::StructDef(n) => &n.position_end,
+            Node::Impl(n) => &n.position_end,
+            Node::TypeAlias(n) => &n.position_end,
+            Node::BoolLiteral(n) => &n.position_end,
+            Node::NullLiteral(n) => &n.position_end,
         }
     }
 
@@ -182,7 +198,9 @@ pub struct VarAccessNode {
 #[derive(Debug, Clone)]
 pub struct VarAssignNode {
     pub variable_name_token: Token,
+    pub var_type: Option<Type>,
     pub value_node: Box<Node>,
+    pub is_constant: bool,
     pub position_start: Position,
     pub position_end: Position,
 }
@@ -242,9 +260,11 @@ pub struct WhileNode {
 #[derive(Debug, Clone)]
 pub struct FuncDefNode {
     pub variable_name_token: Option<Token>,
-    pub arg_name_toks: Vec<Token>,
+    pub param_names: Vec<Token>,
+    pub param_types: Vec<Type>,
+    pub return_type: Type,
     pub body_node: Box<Node>,
-    pub should_auto_return: bool,
+    pub is_arrow: bool, // true for => syntax
     pub position_start: Position,
     pub position_end: Position,
 }
@@ -391,6 +411,52 @@ pub struct ImportSpec {
 pub struct ExportNode {
     pub exported_name: String,
     pub node: Box<Node>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructDefNode {
+    pub name: Token,
+    pub fields: Vec<StructFieldNode>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructFieldNode {
+    pub name: Token,
+    pub field_type: Type,
+    pub is_constant: bool,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct ImplNode {
+    pub struct_name: Token,
+    pub methods: Vec<FuncDefNode>,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeAliasNode {
+    pub name: Token,
+    pub alias_type: Type,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct BoolLiteralNode {
+    pub value: bool,
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct NullLiteralNode {
     pub position_start: Position,
     pub position_end: Position,
 }

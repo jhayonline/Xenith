@@ -28,6 +28,7 @@ pub mod position;
 pub mod runtime_result;
 pub mod symbol_table;
 pub mod tokens;
+pub mod types;
 pub mod utils;
 pub mod values;
 

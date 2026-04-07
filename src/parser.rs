@@ -8,6 +8,7 @@ use crate::nodes::*;
 use crate::parse_result::ParseResult;
 use crate::position::Position;
 use crate::tokens::{Token, TokenType};
+use crate::types::Type;
 
 /// Recursive descent parser for Xenith
 #[derive(Debug)]
@@ -84,6 +85,290 @@ impl Parser {
         }
 
         result
+    }
+
+    /// Parse a type annotation
+    /// Syntax: int | float | string | bool | null | list<T> | map<K, V> | identifier
+    fn parse_type(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+        let type_token = match self.current_token() {
+            Some(tok) => tok.clone(),
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(Self::dummy_pos(), Self::dummy_pos(), "Expected type")
+                        .base,
+                );
+            }
+        };
+
+        let parsed_type = match type_token.kind {
+            TokenType::TypeInt => Type::Int,
+            TokenType::TypeFloat => Type::Float,
+            TokenType::TypeString => Type::String,
+            TokenType::TypeBool => Type::Bool,
+            TokenType::TypeNull => Type::Null,
+            TokenType::TypeList => {
+                // Handle list<T>
+                self.advance(); // consume 'list'
+
+                // Check for '<'
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Lt => {
+                        self.advance(); // consume '<'
+                        let inner_type = result.register_type(&self.parse_type());
+                        if result.error.is_some() {
+                            return result;
+                        }
+
+                        // Expect '>'
+                        match self.current_token() {
+                            Some(tok) if tok.kind == TokenType::Gt => {
+                                self.advance();
+                            }
+                            _ => {
+                                return result.failure(
+                                    InvalidSyntaxError::new(
+                                        Self::dummy_pos(),
+                                        Self::dummy_pos(),
+                                        "Expected '>'",
+                                    )
+                                    .base,
+                                );
+                            }
+                        }
+
+                        Type::List(Box::new(inner_type))
+                    }
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                type_token.position_start.clone(),
+                                type_token.position_end.clone(),
+                                "Expected '<' for list type",
+                            )
+                            .base,
+                        );
+                    }
+                }
+            }
+            TokenType::TypeMap => {
+                // Handle map<K, V>
+                self.advance(); // consume 'map'
+
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Lt => {
+                        self.advance(); // consume '<'
+                        let key_type = result.register_type(&self.parse_type());
+                        if result.error.is_some() {
+                            return result;
+                        }
+
+                        // Expect ','
+                        match self.current_token() {
+                            Some(tok) if tok.kind == TokenType::Comma => {
+                                self.advance();
+                            }
+                            _ => {
+                                return result.failure(
+                                    InvalidSyntaxError::new(
+                                        Self::dummy_pos(),
+                                        Self::dummy_pos(),
+                                        "Expected ','",
+                                    )
+                                    .base,
+                                );
+                            }
+                        }
+
+                        let value_type = result.register_type(&self.parse_type());
+                        if result.error.is_some() {
+                            return result;
+                        }
+
+                        // Expect '>'
+                        match self.current_token() {
+                            Some(tok) if tok.kind == TokenType::Gt => {
+                                self.advance();
+                            }
+                            _ => {
+                                return result.failure(
+                                    InvalidSyntaxError::new(
+                                        Self::dummy_pos(),
+                                        Self::dummy_pos(),
+                                        "Expected '>'",
+                                    )
+                                    .base,
+                                );
+                            }
+                        }
+
+                        Type::Map(Box::new(key_type), Box::new(value_type))
+                    }
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                type_token.position_start.clone(),
+                                type_token.position_end.clone(),
+                                "Expected '<' for map type",
+                            )
+                            .base,
+                        );
+                    }
+                }
+            }
+            TokenType::Identifier => {
+                // Could be a struct name or type alias
+                let name = type_token.value.clone().unwrap();
+                self.advance();
+
+                // Check for generic parameters
+                if let Some(tok) = self.current_token() {
+                    if tok.kind == TokenType::Lt {
+                        return self.parse_generic_type(name);
+                    }
+                }
+
+                Type::Struct(name, Vec::new()) // Placeholder, will resolve later
+            }
+            _ => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        type_token.position_start.clone(),
+                        type_token.position_end.clone(),
+                        &format!("Expected type, got {:?}", type_token.kind),
+                    )
+                    .base,
+                );
+            }
+        };
+
+        // Only advance if we didn't already advance inside the match
+        if !matches!(type_token.kind, TokenType::TypeList | TokenType::TypeMap) {
+            self.advance();
+        }
+
+        result.success_type(parsed_type)
+    }
+
+    /// Parse generic type: list<T>, map<K, V>
+    fn parse_generic_type(&mut self, base_name: String) -> ParseResult {
+        let mut result = ParseResult::new();
+
+        // Consume '<'
+        self.advance();
+
+        match base_name.as_str() {
+            "list" => {
+                let inner_type = result.register_type(&self.parse_type());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                // Expect '>'
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Gt => {
+                        self.advance();
+                    }
+                    Some(tok) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                tok.position_start.clone(),
+                                tok.position_end.clone(),
+                                "Expected '>'",
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected '>'",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                result.success_type(Type::List(Box::new(inner_type)))
+            }
+            "map" => {
+                let key_type = result.register_type(&self.parse_type());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                // Expect ','
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Comma => {
+                        self.advance();
+                    }
+                    Some(tok) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                tok.position_start.clone(),
+                                tok.position_end.clone(),
+                                "Expected ','",
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected ','",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                let value_type = result.register_type(&self.parse_type());
+                if result.error.is_some() {
+                    return result;
+                }
+
+                // Expect '>'
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Gt => {
+                        self.advance();
+                    }
+                    Some(tok) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                tok.position_start.clone(),
+                                tok.position_end.clone(),
+                                "Expected '>'",
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected '>'",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                result.success_type(Type::Map(Box::new(key_type), Box::new(value_type)))
+            }
+            _ => result.failure(
+                InvalidSyntaxError::new(
+                    Self::dummy_pos(),
+                    Self::dummy_pos(),
+                    &format!("Unknown generic type: {}", base_name),
+                )
+                .base,
+            ),
+        }
     }
 
     fn statements(&mut self) -> ParseResult {
@@ -294,6 +579,13 @@ impl Parser {
     }
 
     fn expr(&mut self) -> ParseResult {
+        // Check for const spawn declaration
+        if let Some(tok) = self.current_token() {
+            if tok.matches(TokenType::Keyword, Some("const")) {
+                return self.var_declaration();
+            }
+        }
+
         // Check for variable declaration with 'spawn'
         if let Some(tok) = self.current_token() {
             if tok.matches(TokenType::Keyword, Some("spawn")) {
@@ -313,9 +605,9 @@ impl Parser {
                     } else if next_tok.kind == TokenType::MinusEqual {
                         return self.compound_assignment(TokenType::MinusEqual);
                     } else if next_tok.kind == TokenType::PlusPlus {
-                        return self.increment_decrement(true); // true for increment
+                        return self.increment_decrement(true);
                     } else if next_tok.kind == TokenType::MinusMinus {
-                        return self.increment_decrement(false); // false for decrement
+                        return self.increment_decrement(false);
                     }
                 }
             }
@@ -880,7 +1172,9 @@ impl Parser {
 
             return result.success(Node::VarAssign(Box::new(VarAssignNode {
                 variable_name_token: var_name,
+                var_type: None,
                 value_node: Box::new(bin_op_node),
+                is_constant: false,
                 position_start: pos_start,
                 position_end: pos_end,
             })));
@@ -971,7 +1265,9 @@ impl Parser {
 
         result.success(Node::VarAssign(Box::new(VarAssignNode {
             variable_name_token: var_name,
+            var_type: None,
             value_node: Box::new(bin_op_node),
+            is_constant: false,
             position_start: pos_start,
             position_end: pos_end,
         })))
@@ -980,6 +1276,16 @@ impl Parser {
     // Variable declaration with 'spawn' keyword
     fn var_declaration(&mut self) -> ParseResult {
         let mut result = ParseResult::new();
+        let mut is_constant = false;
+
+        // Check for 'const' keyword
+        if let Some(tok) = self.current_token() {
+            if tok.matches(TokenType::Keyword, Some("const")) {
+                is_constant = true;
+                self.advance(); // consume 'const'
+            }
+        }
+
         let pos_start = match self.current_token() {
             Some(t) if t.matches(TokenType::Keyword, Some("spawn")) => t.position_start.clone(),
             _ => {
@@ -993,6 +1299,7 @@ impl Parser {
                 );
             }
         };
+
         self.advance(); // consume 'spawn'
 
         let var_name = match self.current_token() {
@@ -1020,6 +1327,29 @@ impl Parser {
         };
         self.advance();
 
+        // Parse type annotation (required)
+        let var_type = match self.current_token() {
+            Some(t) if t.kind == TokenType::Colon => {
+                self.advance(); // consume ':'
+                let typ = result.register_type(&self.parse_type());
+                if result.error.is_some() {
+                    return result;
+                }
+                Some(typ)
+            }
+            _ => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        var_name.position_start.clone(),
+                        var_name.position_end.clone(),
+                        "Expected type annotation ':'",
+                    )
+                    .base,
+                );
+            }
+        };
+
+        // Parse '='
         match self.current_token() {
             Some(t) if t.kind == TokenType::Eq => {
                 self.advance();
@@ -1047,21 +1377,19 @@ impl Parser {
             return result;
         }
 
-        if let Some(val_node) = value {
-            let pos_end = self
-                .current_token()
-                .map(|t| t.position_end.clone())
-                .unwrap_or_else(|| pos_start.clone());
+        let pos_end = self
+            .current_token()
+            .map(|t| t.position_end.clone())
+            .unwrap_or_else(|| pos_start.clone());
 
-            return result.success(Node::VarAssign(Box::new(VarAssignNode {
-                variable_name_token: var_name,
-                value_node: Box::new(val_node),
-                position_start: pos_start,
-                position_end: pos_end,
-            })));
-        }
-
-        result
+        result.success(Node::VarAssign(Box::new(VarAssignNode {
+            variable_name_token: var_name,
+            var_type,
+            value_node: Box::new(value.unwrap()),
+            is_constant,
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
     }
 
     // Variable reassignment (without 'spawn')
@@ -1119,7 +1447,9 @@ impl Parser {
 
             return result.success(Node::VarAssign(Box::new(VarAssignNode {
                 variable_name_token: var_name,
+                var_type: None,
                 value_node: Box::new(val_node),
+                is_constant: false,
                 position_start: pos_start,
                 position_end: pos_end,
             })));
@@ -2107,6 +2437,32 @@ impl Parser {
                     self.advance();
                     return result.success(node);
                 }
+                TokenType::BoolTrue => {
+                    let node = Node::BoolLiteral(BoolLiteralNode {
+                        value: true,
+                        position_start: tok.position_start.clone(),
+                        position_end: tok.position_end.clone(),
+                    });
+                    self.advance();
+                    return result.success(node);
+                }
+                TokenType::BoolFalse => {
+                    let node = Node::BoolLiteral(BoolLiteralNode {
+                        value: false,
+                        position_start: tok.position_start.clone(),
+                        position_end: tok.position_end.clone(),
+                    });
+                    self.advance();
+                    return result.success(node);
+                }
+                TokenType::TypeNull => {
+                    let node = Node::NullLiteral(NullLiteralNode {
+                        position_start: tok.position_start.clone(),
+                        position_end: tok.position_end.clone(),
+                    });
+                    self.advance();
+                    return result.success(node);
+                }
                 TokenType::Identifier => {
                     let node = Node::VarAccess(VarAccessNode {
                         variable_name_token: tok.clone(),
@@ -3038,31 +3394,83 @@ impl Parser {
             }
         }
 
-        let mut arg_name_toks = Vec::new();
+        let mut param_names = Vec::new();
+        let mut param_types = Vec::new();
 
         // Parse parameters
         if let Some(t) = self.current_token() {
-            if t.kind == TokenType::Identifier {
-                arg_name_toks.push(t.clone());
-                self.advance();
+            if t.kind != TokenType::RParen {
+                // Parse first parameter
+                let param_name = match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Identifier => {
+                        let name = tok.clone();
+                        self.advance();
+                        name
+                    }
+                    Some(tok) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                tok.position_start.clone(),
+                                tok.position_end.clone(),
+                                "Expected parameter name",
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected parameter name",
+                            )
+                            .base,
+                        );
+                    }
+                };
 
+                // Parse type annotation
+                match self.current_token() {
+                    Some(tok) if tok.kind == TokenType::Colon => {
+                        self.advance(); // consume ':'
+                        let param_type = result.register_type(&self.parse_type());
+                        if result.error.is_some() {
+                            return result;
+                        }
+                        param_names.push(param_name);
+                        param_types.push(param_type);
+                    }
+                    _ => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                param_name.position_start.clone(),
+                                param_name.position_end.clone(),
+                                "Expected type annotation ':' for parameter",
+                            )
+                            .base,
+                        );
+                    }
+                }
+
+                // Parse remaining parameters
                 while let Some(comma) = self.current_token() {
                     if comma.kind != TokenType::Comma {
                         break;
                     }
                     self.advance();
 
-                    match self.current_token() {
-                        Some(next) if next.kind == TokenType::Identifier => {
-                            arg_name_toks.push(next.clone());
+                    let next_name = match self.current_token() {
+                        Some(tok) if tok.kind == TokenType::Identifier => {
+                            let name = tok.clone();
                             self.advance();
+                            name
                         }
-                        Some(next) => {
+                        Some(tok) => {
                             return result.failure(
                                 InvalidSyntaxError::new(
-                                    next.position_start.clone(),
-                                    next.position_end.clone(),
-                                    "Expected identifier",
+                                    tok.position_start.clone(),
+                                    tok.position_end.clone(),
+                                    "Expected parameter name",
                                 )
                                 .base,
                             );
@@ -3072,7 +3480,29 @@ impl Parser {
                                 InvalidSyntaxError::new(
                                     Self::dummy_pos(),
                                     Self::dummy_pos(),
-                                    "Expected identifier",
+                                    "Expected parameter name",
+                                )
+                                .base,
+                            );
+                        }
+                    };
+
+                    match self.current_token() {
+                        Some(tok) if tok.kind == TokenType::Colon => {
+                            self.advance(); // consume ':'
+                            let param_type = result.register_type(&self.parse_type());
+                            if result.error.is_some() {
+                                return result;
+                            }
+                            param_names.push(next_name);
+                            param_types.push(param_type);
+                        }
+                        _ => {
+                            return result.failure(
+                                InvalidSyntaxError::new(
+                                    next_name.position_start.clone(),
+                                    next_name.position_end.clone(),
+                                    "Expected type annotation ':' for parameter",
                                 )
                                 .base,
                             );
@@ -3104,74 +3534,76 @@ impl Parser {
             }
         }
 
-        // Parse body - check for arrow function first
-        match self.current_token() {
+        // Parse return type
+        let return_type = match self.current_token() {
             Some(t) if t.kind == TokenType::Arrow => {
-                // Arrow function (single expression)
-                self.advance();
-
-                let body = result.register(&self.expr());
+                self.advance(); // consume '->'
+                let typ = result.register_type(&self.parse_type());
                 if result.error.is_some() {
                     return result;
                 }
+                typ
+            }
+            _ => Type::Null, // Default return type
+        };
 
-                if let Some(body_node) = body {
-                    let pos_end = body_node.position_end().clone();
-                    result.success(Node::FuncDef(Box::new(FuncDefNode {
-                        variable_name_token: var_name_tok,
-                        arg_name_toks,
-                        body_node: Box::new(body_node),
-                        should_auto_return: true,
-                        position_start: pos_start,
-                        position_end: pos_end,
-                    })))
-                } else {
-                    result.failure(
+        // Parse body - check for arrow function first
+        let is_arrow = if let Some(t) = self.current_token() {
+            t.kind == TokenType::FatArrow
+        } else {
+            false
+        };
+
+        let body = if is_arrow {
+            self.advance(); // consume '=>'
+            let expr = result.register(&self.expr());
+            if result.error.is_some() {
+                return result;
+            }
+            expr.unwrap()
+        } else {
+            match self.current_token() {
+                Some(t) if t.kind == TokenType::LBrace => {
+                    let block = result.register(&self.block());
+                    if result.error.is_some() {
+                        return result;
+                    }
+                    block.unwrap()
+                }
+                Some(t) => {
+                    return result.failure(
+                        InvalidSyntaxError::new(
+                            t.position_start.clone(),
+                            t.position_end.clone(),
+                            "Expected '=>' or '{'",
+                        )
+                        .base,
+                    );
+                }
+                None => {
+                    return result.failure(
                         InvalidSyntaxError::new(
                             Self::dummy_pos(),
                             Self::dummy_pos(),
-                            "Expected expression after '->'",
+                            "Expected '=>' or '{'",
                         )
                         .base,
-                    )
+                    );
                 }
             }
-            Some(t) if t.kind == TokenType::LBrace => {
-                let body = result.register(&self.block());
-                if result.error.is_some() {
-                    return result;
-                }
+        };
 
-                if let Some(body_node) = body {
-                    let pos_end = body_node.position_end().clone();
-                    result.success(Node::FuncDef(Box::new(FuncDefNode {
-                        variable_name_token: var_name_tok,
-                        arg_name_toks,
-                        body_node: Box::new(body_node),
-                        should_auto_return: false,
-                        position_start: pos_start,
-                        position_end: pos_end,
-                    })))
-                } else {
-                    result
-                }
-            }
-            Some(t) => result.failure(
-                InvalidSyntaxError::new(
-                    t.position_start.clone(),
-                    t.position_end.clone(),
-                    "Expected '->' or '{'",
-                )
-                .base,
-            ),
-            None => result.failure(
-                InvalidSyntaxError::new(
-                    Self::dummy_pos(),
-                    Self::dummy_pos(),
-                    "Expected '->' or '{'",
-                )
-                .base,
-            ),
-        }
+        let pos_end = body.position_end().clone();
+
+        result.success(Node::FuncDef(Box::new(FuncDefNode {
+            variable_name_token: var_name_tok,
+            param_names,
+            param_types,
+            return_type,
+            body_node: Box::new(body),
+            is_arrow,
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
     }
 }
