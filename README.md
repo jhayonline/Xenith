@@ -30,3 +30,4 @@ This Rust edition of Xenith aims to retain the language’s original simplicity 
 - ✅ String interpolation
 - ✅ Proper variable scoping (methods can now modify outer variables!)
 - ✅ Error handling (try/catch/panic)
+- ✅ Import module system
