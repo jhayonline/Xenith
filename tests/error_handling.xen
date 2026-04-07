@@ -15,7 +15,7 @@ echo("")
 # Test 2: Catching runtime errors (division by zero)
 echo("Test 2: Catching division by zero")
 try {
-    spawn x = 10 / 0
+    spawn x: int = 10 / 0
     echo("  Result: {x}")
 } catch err {
     echo("  Caught error: {err}")
@@ -25,7 +25,7 @@ echo("")
 # Test 3: No error - should execute normally
 echo("Test 3: No error occurs")
 try {
-    spawn y = 42
+    spawn y: int = 42
     echo("  y = {y}")
 } catch err {
     echo("  This should not execute: {err}")

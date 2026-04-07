@@ -1,4 +1,5 @@
-spawn user = {
+# Test maps with types
+spawn user: map<string, int> = {
     "name": "Alice",
     "age": 25,
     "city": "New York"

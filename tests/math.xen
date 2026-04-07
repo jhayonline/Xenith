@@ -1,14 +1,14 @@
-export method add(a, b) {
+export method add(a: int, b: int) -> int {
     release a + b
 }
 
-export method multiply(a, b) {
+export method multiply(a: int, b: int) -> int {
     release a * b
 }
 
-export spawn PI = 3.14159
+export spawn PI: float = 3.14159
 
 # Private function
-method _helper(x) {
+method _helper(x: int) -> int {
     release x * 2
 }

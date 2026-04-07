@@ -330,17 +330,30 @@ impl Interpreter {
     ) -> RuntimeResult {
         let mut result = RuntimeResult::new();
         let mut elements = Vec::new();
+        let mut last_value = Value::Number(Number::null());
 
         for elem_node in &node.element_nodes {
-            let elem = result.register(self.visit(elem_node, context));
+            let elem_result = self.visit(elem_node, context);
+
+            // Check if this result has a caught error (panic)
+            if elem_result.caught_error.is_some() {
+                return elem_result; // Propagate the panic up immediately
+            }
+
+            let elem = result.register(elem_result);
             if result.should_return() {
                 return result;
             }
-            elements.push(elem);
+            elements.push(elem.clone());
+            last_value = elem;
         }
 
-        // Return the list, not the last value
-        result.success(Value::List(List::new(elements)))
+        // Return the last value, or null if empty
+        if elements.is_empty() {
+            result.success(Value::Number(Number::null()))
+        } else {
+            result.success(last_value)
+        }
     }
 
     fn visit_map(&mut self, node: &crate::nodes::MapNode, context: &mut Context) -> RuntimeResult {
