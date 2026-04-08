@@ -160,6 +160,7 @@ impl Interpreter {
             Node::TypeAlias(n) => self.visit_type_alias(n, context),
             Node::BoolLiteral(n) => self.visit_bool_literal(n, context),
             Node::NullLiteral(n) => self.visit_null_literal(n, context),
+            Node::StructInstantiation(n) => self.visit_struct_instantiation(n, context),
         }
     }
 
@@ -182,6 +183,29 @@ impl Interpreter {
         );
 
         RuntimeResult::new().success(Value::Number(Number::null()))
+    }
+
+    fn visit_struct_instantiation(
+        &mut self,
+        node: &crate::nodes::StructInstantiationNode,
+        context: &mut Context,
+    ) -> RuntimeResult {
+        let mut result = RuntimeResult::new();
+        eprintln!("DEBUG: Creating struct instance of '{}'", node.struct_name);
+        let mut struct_instance = crate::values::Struct::new(node.struct_name.clone());
+
+        for (field_name, value_node) in &node.fields {
+            let value = result.register(self.visit(value_node, context));
+            if result.should_return() {
+                return result;
+            }
+            let name = field_name.value.as_ref().unwrap().clone();
+            eprintln!("DEBUG: Setting field '{}' = {:?}", name, value);
+            struct_instance.set_field(name, value);
+        }
+
+        eprintln!("DEBUG: Struct instance created: {:?}", struct_instance);
+        result.success(Value::Struct(struct_instance))
     }
 
     fn visit_impl(&mut self, node: &ImplNode, context: &mut Context) -> RuntimeResult {
@@ -456,6 +480,8 @@ impl Interpreter {
             return result;
         }
 
+        eprintln!("DEBUG: Assigning to var '{}' value = {:?}", var_name, value);
+
         // Use set_existing to update the variable in its original scope,
         // or create it in current scope if it doesn't exist
         context
@@ -474,6 +500,79 @@ impl Interpreter {
 
         // Handle assignment separately before evaluating both sides
         if node.operator_token.kind == crate::tokens::TokenType::Eq {
+            // Check if this is a struct field assignment (left side has a dot)
+            if let Node::BinaryOperator(bin_op) = &*node.left_node {
+                if bin_op.operator_token.kind == crate::tokens::TokenType::Dot {
+                    // This is struct.field = value
+                    let struct_value = result.register(self.visit(&bin_op.left_node, context));
+                    if result.should_return() {
+                        return result;
+                    }
+
+                    let field_name = if let Node::VarAccess(var_node) = &*bin_op.right_node {
+                        var_node.variable_name_token.value.as_ref().unwrap().clone()
+                    } else {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                "Expected field name after '.'",
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    };
+
+                    let value = result.register(self.visit(&node.right_node, context));
+                    if result.should_return() {
+                        return result;
+                    }
+
+                    // Get the variable name to write back
+                    let var_name = if let Node::VarAccess(var_node) = &*bin_op.left_node {
+                        Some(var_node.variable_name_token.value.as_ref().unwrap().clone())
+                    } else {
+                        None
+                    };
+
+                    // Update the struct field
+                    match struct_value {
+                        Value::Struct(mut s) => {
+                            s.set_field(field_name.clone(), value.clone());
+                            // Write the mutated struct back to the variable
+                            if let Some(name) = var_name {
+                                context
+                                    .symbol_table
+                                    .set_existing(name, Value::Struct(s.clone()));
+                            }
+                            return result.success(value);
+                        }
+                        Value::Map(mut m) => {
+                            m.set(field_name.clone(), value.clone());
+                            if let Some(name) = var_name {
+                                context.symbol_table.set_existing(name, Value::Map(m));
+                            }
+                            return result.success(value);
+                        }
+                        _ => {
+                            return result.failure(
+                                RuntimeError::new(
+                                    node.position_start.clone(),
+                                    node.position_end.clone(),
+                                    &format!(
+                                        "Cannot set field '{}' on non-struct/non-map value",
+                                        field_name
+                                    ),
+                                    Some(context.clone()),
+                                )
+                                .base,
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Check for MethodAccess pattern (object.field = value)
             if let Node::MethodAccess(field_node) = &*node.left_node {
                 let object_value = result.register(self.visit(&field_node.object, context));
                 if result.should_return() {
@@ -545,6 +644,77 @@ impl Interpreter {
                 };
                 context.symbol_table.set_existing(var_name, right.clone());
                 return result.success(right);
+            }
+        }
+
+        // Handle struct field access before other operators
+        if node.operator_token.kind == crate::tokens::TokenType::Dot {
+            let left = result.register(self.visit(&node.left_node, context));
+            if result.should_return() {
+                return result;
+            }
+
+            // The right node should be an identifier (field name)
+            let field_name = if let Node::VarAccess(var_node) = &*node.right_node {
+                var_node.variable_name_token.value.as_ref().unwrap().clone()
+            } else {
+                return result.failure(
+                    RuntimeError::new(
+                        node.position_start.clone(),
+                        node.position_end.clone(),
+                        "Expected field name after '.'",
+                        Some(context.clone()),
+                    )
+                    .base,
+                );
+            };
+
+            eprintln!("DEBUG: left value = {:?}", left);
+
+            // Access the field
+            match left {
+                Value::Struct(s) => {
+                    if let Some(field_value) = s.get_field(&field_name) {
+                        return result.success(field_value.clone());
+                    } else {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!("Struct has no field '{}'", field_name),
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                }
+                Value::Map(m) => {
+                    if let Some(field_value) = m.get(&field_name) {
+                        return result.success(field_value.clone());
+                    } else {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!("Map has no key '{}'", field_name),
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                }
+                _ => {
+                    eprintln!("DEBUG: left is not Struct or Map, it's: {:?}", left);
+                    return result.failure(
+                        RuntimeError::new(
+                            node.position_start.clone(),
+                            node.position_end.clone(),
+                            "Cannot access field on non-struct/non-map value",
+                            Some(context.clone()),
+                        )
+                        .base,
+                    );
+                }
             }
         }
 

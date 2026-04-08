@@ -41,6 +41,7 @@ pub enum Node {
     TypeAlias(Box<TypeAliasNode>),
     BoolLiteral(BoolLiteralNode),
     NullLiteral(NullLiteralNode),
+    StructInstantiation(Box<StructInstantiationNode>),
 }
 
 impl Node {
@@ -75,6 +76,7 @@ impl Node {
             Node::TypeAlias(n) => &n.position_start,
             Node::BoolLiteral(n) => &n.position_start,
             Node::NullLiteral(n) => &n.position_start,
+            Node::StructInstantiation(n) => &n.position_start,
         }
     }
 
@@ -109,6 +111,7 @@ impl Node {
             Node::TypeAlias(n) => &n.position_end,
             Node::BoolLiteral(n) => &n.position_end,
             Node::NullLiteral(n) => &n.position_end,
+            Node::StructInstantiation(n) => &n.position_end,
         }
     }
 
@@ -457,6 +460,14 @@ pub struct BoolLiteralNode {
 
 #[derive(Debug, Clone)]
 pub struct NullLiteralNode {
+    pub position_start: Position,
+    pub position_end: Position,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructInstantiationNode {
+    pub struct_name: String,
+    pub fields: Vec<(Token, Node)>,
     pub position_start: Position,
     pub position_end: Position,
 }

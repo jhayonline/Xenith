@@ -2643,14 +2643,14 @@ impl Parser {
             if tok.kind == TokenType::Dot {
                 self.advance(); // consume '.'
 
-                let method_name = match self.current_token() {
+                let field_or_method_name = match self.current_token() {
                     Some(t) if t.kind == TokenType::Identifier => t.clone(),
                     Some(t) => {
                         return result.failure(
                             InvalidSyntaxError::new(
                                 t.position_start.clone(),
                                 t.position_end.clone(),
-                                "Expected method name",
+                                "Expected field or method name",
                             )
                             .base,
                         );
@@ -2660,7 +2660,7 @@ impl Parser {
                             InvalidSyntaxError::new(
                                 Self::dummy_pos(),
                                 Self::dummy_pos(),
-                                "Expected method name",
+                                "Expected field or method name",
                             )
                             .base,
                         );
@@ -2668,102 +2668,133 @@ impl Parser {
                 };
                 self.advance();
 
-                // Parse arguments
-                let mut arg_nodes = Vec::new();
-                if let Some(tok2) = self.current_token() {
-                    if tok2.kind == TokenType::LParen {
-                        self.advance(); // consume '('
+                // Check if this is a method call (followed by '(') or field access
+                let is_method_call =
+                    matches!(self.current_token(), Some(t) if t.kind == TokenType::LParen);
 
-                        // Parse arguments
-                        if let Some(rparen) = self.current_token() {
-                            if rparen.kind != TokenType::RParen {
-                                let arg = result.register(&self.expr());
+                if is_method_call {
+                    // Parse method call arguments
+                    self.advance(); // consume '('
+
+                    let mut arg_nodes = Vec::new();
+
+                    // Parse arguments
+                    if let Some(rparen) = self.current_token() {
+                        if rparen.kind != TokenType::RParen {
+                            let arg = result.register(&self.expr());
+                            if result.error.is_some() {
+                                return result;
+                            }
+                            if let Some(arg_node) = arg {
+                                arg_nodes.push(Box::new(arg_node));
+                            }
+
+                            while let Some(comma) = self.current_token().cloned() {
+                                if comma.kind != TokenType::Comma {
+                                    break;
+                                }
+                                self.advance();
+
+                                let next_arg = result.register(&self.expr());
                                 if result.error.is_some() {
                                     return result;
                                 }
-                                if let Some(arg_node) = arg {
+                                if let Some(arg_node) = next_arg {
                                     arg_nodes.push(Box::new(arg_node));
                                 }
-
-                                while let Some(comma) = self.current_token().cloned() {
-                                    if comma.kind != TokenType::Comma {
-                                        break;
-                                    }
-                                    self.advance();
-
-                                    let next_arg = result.register(&self.expr());
-                                    if result.error.is_some() {
-                                        return result;
-                                    }
-                                    if let Some(arg_node) = next_arg {
-                                        arg_nodes.push(Box::new(arg_node));
-                                    }
-                                }
                             }
                         }
-
-                        match self.current_token() {
-                            Some(t) if t.kind == TokenType::RParen => {
-                                self.advance();
-                            }
-                            Some(t) => {
-                                return result.failure(
-                                    InvalidSyntaxError::new(
-                                        t.position_start.clone(),
-                                        t.position_end.clone(),
-                                        "Expected ')'",
-                                    )
-                                    .base,
-                                );
-                            }
-                            None => {
-                                return result.failure(
-                                    InvalidSyntaxError::new(
-                                        Self::dummy_pos(),
-                                        Self::dummy_pos(),
-                                        "Expected ')'",
-                                    )
-                                    .base,
-                                );
-                            }
-                        }
-                    } else {
-                        //
                     }
+
+                    match self.current_token() {
+                        Some(t) if t.kind == TokenType::RParen => {
+                            self.advance();
+                        }
+                        Some(t) => {
+                            return result.failure(
+                                InvalidSyntaxError::new(
+                                    t.position_start.clone(),
+                                    t.position_end.clone(),
+                                    "Expected ')'",
+                                )
+                                .base,
+                            );
+                        }
+                        None => {
+                            return result.failure(
+                                InvalidSyntaxError::new(
+                                    Self::dummy_pos(),
+                                    Self::dummy_pos(),
+                                    "Expected ')'",
+                                )
+                                .base,
+                            );
+                        }
+                    }
+
+                    // Create method call node
+                    let node_pos_start = node.position_start().clone();
+                    let method_pos_end = field_or_method_name.position_end.clone();
+                    let method_pos_start = field_or_method_name.position_start.clone();
+
+                    let method_token = Token::new(
+                        TokenType::Identifier,
+                        field_or_method_name.value.clone(),
+                        method_pos_start,
+                        Some(method_pos_end.clone()),
+                    );
+
+                    let new_node = Node::Call(Box::new(CallNode {
+                        node_to_call: Box::new(Node::MethodAccess(MethodAccessNode {
+                            object: Box::new(node),
+                            method_name: method_token,
+                            position_start: node_pos_start.clone(),
+                            position_end: method_pos_end.clone(),
+                        })),
+                        argument_nodes: arg_nodes,
+                        position_start: node_pos_start,
+                        position_end: self
+                            .current_token()
+                            .map(|t| t.position_end.clone())
+                            .unwrap_or(method_pos_end),
+                    }));
+                    node = new_node;
+                } else {
+                    // This is field access - create a binary operation node with dot operator
+                    let field_token = Token::new(
+                        TokenType::Identifier,
+                        field_or_method_name.value.clone(),
+                        field_or_method_name.position_start.clone(),
+                        Some(field_or_method_name.position_end.clone()),
+                    );
+
+                    let field_node = Node::VarAccess(VarAccessNode {
+                        variable_name_token: field_token,
+                        position_start: field_or_method_name.position_start.clone(),
+                        position_end: field_or_method_name.position_end.clone(),
+                    });
+
+                    // Create a binary operation node for field access
+                    let dot_token = Token::new(
+                        TokenType::Dot,
+                        None,
+                        tok.position_start.clone(),
+                        Some(field_or_method_name.position_end.clone()),
+                    );
+
+                    // Clone node before moving it into the Box
+                    let node_clone = node.clone();
+
+                    node = Node::BinaryOperator(Box::new(BinaryOperatorNode {
+                        left_node: Box::new(node_clone),
+                        operator_token: dot_token,
+                        right_node: Box::new(field_node),
+                        position_start: node.position_start().clone(),
+                        position_end: field_or_method_name.position_end.clone(),
+                    }));
                 }
-
-                // Extract positions with clones BEFORE moving node
-                let node_pos_start = node.position_start().clone();
-                let node_pos_end = node.position_end().clone();
-                let method_pos_end = method_name.position_end.clone();
-                let method_pos_start = method_name.position_start.clone();
-
-                // Create a method access node wrapped in a call node
-                let method_token = Token::new(
-                    TokenType::Identifier,
-                    method_name.value.clone(),
-                    method_pos_start,
-                    Some(method_pos_end.clone()),
-                );
-
-                // Build the new node
-                let new_node = Node::Call(Box::new(CallNode {
-                    node_to_call: Box::new(Node::MethodAccess(MethodAccessNode {
-                        object: Box::new(node), // node is moved here
-                        method_name: method_token,
-                        position_start: node_pos_start.clone(),
-                        position_end: method_pos_end.clone(),
-                    })),
-                    argument_nodes: arg_nodes,
-                    position_start: node_pos_start,
-                    position_end: self
-                        .current_token()
-                        .map(|t| t.position_end.clone())
-                        .unwrap_or(method_pos_end),
-                }));
-                node = new_node;
             } else if tok.kind == TokenType::LParen {
-                // Regular function call
+                // Regular function call (existing code)
                 let pos_start = tok.position_start.clone();
                 self.advance(); // consume '('
 
@@ -2894,23 +2925,52 @@ impl Parser {
 
                     // Check if this is a struct instantiation (followed by {} ON THE SAME LINE)
                     if let Some(lbrace) = self.current_token() {
+                        eprintln!(
+                            "DEBUG atom: Checking for struct instantiation, next token = {:?}, line match = {}",
+                            lbrace.kind,
+                            lbrace.position_start.line == struct_pos_end.line
+                        );
                         if lbrace.kind == TokenType::LBrace
                             && lbrace.position_start.line == struct_pos_end.line
                         {
-                            // Peek inside: next token after '{' should be '}' or 'identifier :'
-                            let after_brace = self.tokens.get(self.token_index + 1);
+                            // Skip newlines to find the first non-newline token after '{'
+                            let mut peek_index = self.token_index + 1;
+                            let mut after_brace = self.tokens.get(peek_index);
+                            while let Some(t) = after_brace {
+                                if t.kind == TokenType::Newline {
+                                    peek_index += 1;
+                                    after_brace = self.tokens.get(peek_index);
+                                } else {
+                                    break;
+                                }
+                            }
+
                             let is_struct = match after_brace {
                                 Some(t) if t.kind == TokenType::RBrace => true, // empty struct
                                 Some(t) if t.kind == TokenType::Identifier => {
-                                    // Check if token after identifier is ':'
-                                    matches!(
-                                        self.tokens.get(self.token_index + 2),
-                                        Some(t2) if t2.kind == TokenType::Colon
-                                    )
+                                    // Check if token after identifier is ':' (skip newlines)
+                                    let mut after_identifier_index = peek_index + 1;
+                                    let mut after_identifier =
+                                        self.tokens.get(after_identifier_index);
+                                    while let Some(t) = after_identifier {
+                                        if t.kind == TokenType::Newline {
+                                            after_identifier_index += 1;
+                                            after_identifier =
+                                                self.tokens.get(after_identifier_index);
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    matches!(after_identifier, Some(t2) if t2.kind == TokenType::Colon)
                                 }
                                 _ => false,
                             };
+                            eprintln!("DEBUG atom: is_struct = {}", is_struct);
                             if is_struct {
+                                eprintln!(
+                                    "DEBUG atom: Calling struct_instantiation for '{}'",
+                                    struct_name
+                                );
                                 return self.struct_instantiation(struct_name);
                             }
                         }
@@ -3120,29 +3180,14 @@ impl Parser {
             .map(|t| t.position_end.clone())
             .unwrap_or(pos_start.clone());
 
-        // Create a struct instantiation node
-        // For now, we'll create a map node that represents the struct
-        let mut pairs = Vec::new();
-        for (name, value) in fields {
-            let key_node = Node::String(StringNode::new(Token::new(
-                TokenType::String,
-                Some(name.value.clone().unwrap()),
-                name.position_start.clone(),
-                Some(name.position_end.clone()),
-            )));
-            pairs.push(MapPair {
-                key_node: Box::new(key_node),
-                value_node: Box::new(value.clone()), // Clone here
-                position_start: name.position_start,
-                position_end: value.position_end().clone(),
-            });
-        }
-
-        result.success(Node::Map(MapNode {
-            pairs,
-            position_start: pos_start,
-            position_end: pos_end,
-        }))
+        result.success(Node::StructInstantiation(Box::new(
+            StructInstantiationNode {
+                struct_name,
+                fields,
+                position_start: pos_start,
+                position_end: pos_end,
+            },
+        )))
     }
 
     // Method to handle indexing (e.g., fruits[0], matrix[1][0])
