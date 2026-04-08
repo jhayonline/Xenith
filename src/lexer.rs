@@ -491,6 +491,7 @@ impl Lexer {
             "type" => TokenType::TypeAlias,
             "true" => TokenType::BoolTrue,
             "false" => TokenType::BoolFalse,
+            "json" => TokenType::TypeJson,
             _ => {
                 if KEYWORDS.contains(&id_str.as_str()) {
                     TokenType::Keyword

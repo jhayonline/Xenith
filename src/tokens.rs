@@ -48,6 +48,7 @@ pub enum TokenType {
     TypeAlias,
     BoolTrue,
     BoolFalse,
+    TypeJson,
 
     // Delimiters
     LParen,
@@ -147,4 +148,5 @@ pub const KEYWORDS: &[&str] = &[
     "type",
     "true",
     "false",
+    "json",
 ];

@@ -1,0 +1,52 @@
+grab { parse, stringify, stringify_pretty } from "std::json"
+
+echo("=== JSON Module Test ===\n")
+
+# Test parse using map literal
+echo("1. Parse JSON from map literal:")
+spawn user: json = parse({
+    "name": "Alice",
+    "age": 25,
+    "active": true
+})
+echo("   Parse successful\n")
+
+# Test stringify
+echo("2. Convert JSON to string:")
+spawn json_str: string = stringify(user)
+echo("   {json_str}\n")
+
+# Test stringify_pretty
+echo("3. Pretty print JSON:")
+spawn pretty: string = stringify_pretty(user)
+echo("{pretty}\n")
+
+# Test nested JSON
+echo("4. Parse nested JSON:")
+spawn config: json = parse({
+    "server": {
+        "host": "localhost",
+        "port": 8080
+    }
+})
+spawn config_str: string = stringify(config)
+echo("   {config_str}\n")
+
+# Test array
+echo("5. Parse JSON with array:")
+spawn data: json = parse({
+    "items": [1, 2, 3, 4, 5]
+})
+spawn data_str: string = stringify(data)
+echo("   {data_str}\n")
+
+# Test round trip
+echo("6. Round trip test:")
+spawn original: json = parse({
+    "name": "Bob",
+    "age": 30
+})
+spawn back: json = parse(stringify(original))
+echo("   Round trip successful\n")
+
+echo("=== All tests completed! ===")

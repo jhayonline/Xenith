@@ -424,6 +424,32 @@ impl Interpreter {
             Value::BuiltInFunction(BuiltInFunction::new("__rand_uuid")),
         );
 
+        // std::json  JSON
+        global.set(
+            "__json_parse".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_parse")),
+        );
+        global.set(
+            "__json_stringify".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_stringify")),
+        );
+        global.set(
+            "__json_stringify_pretty".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_stringify_pretty")),
+        );
+        global.set(
+            "__json_get".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_get")),
+        );
+        global.set(
+            "__json_set".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_set")),
+        );
+        global.set(
+            "__json_has_key".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_has_key")),
+        );
+
         Self {
             global_symbol_table: global,
             module_registry: None,

@@ -1,0 +1,17 @@
+# Standard Library: JSON Processing
+# Provides JSON parsing and serialization
+
+# Parses a JSON string into a json type
+export method parse(json_string: string) -> json {
+    release __json_parse(json_string)
+}
+
+# Converts a json value to a JSON string
+export method stringify(value: json) -> string {
+    release __json_stringify(value)
+}
+
+# Converts a json value to a formatted JSON string
+export method stringify_pretty(value: json) -> string {
+    release __json_stringify_pretty(value)
+}

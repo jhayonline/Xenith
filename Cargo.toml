@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 rand = "0.8"
 uuid = { version = "1", features = ["v4"] }
+serde_json = "1.0"
 
 [[bin]]
 name = "xenith"

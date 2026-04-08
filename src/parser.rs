@@ -282,6 +282,7 @@ impl Parser {
                     }
                 }
             }
+            TokenType::TypeJson => Type::Json,
             TokenType::TypeMap => {
                 // Handle map<K, V>
                 self.advance(); // consume 'map'

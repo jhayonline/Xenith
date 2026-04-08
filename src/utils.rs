@@ -160,6 +160,7 @@ pub fn value_to_string(value: &Value) -> String {
                 "false".to_string()
             }
         }
+        Value::Json(j) => j.value.to_string(),
     }
 }
 
@@ -225,5 +226,6 @@ pub fn value_to_interpolated_string(value: &Value) -> String {
                 "false".to_string()
             }
         }
+        Value::Json(j) => j.value.to_string(),
     }
 }

@@ -28,6 +28,8 @@ pub enum Type {
     Alias(String, Box<Type>),
     /// Unknown/not yet resolved (for parsing)
     Unknown,
+
+    Json,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +56,7 @@ impl Type {
             Type::Null => "null".to_string(),
             Type::List(_) => "[]".to_string(),
             Type::Map(_, _) => "{}".to_string(),
+            Type::Json => "null".to_string(),
             _ => "null".to_string(),
         }
     }
@@ -105,6 +108,7 @@ impl Type {
             Type::Struct(name, _) => name.clone(),
             Type::Alias(name, _) => name.clone(),
             Type::Unknown => "unknown".to_string(),
+            Type::Json => "json".to_string(),
         }
     }
 }

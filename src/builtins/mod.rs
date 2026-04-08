@@ -1,4 +1,5 @@
 pub mod fs;
+pub mod json;
 pub mod math;
 pub mod path;
 pub mod random;

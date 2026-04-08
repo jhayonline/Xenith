@@ -26,6 +26,7 @@ pub enum Value {
     Map(Map),
     Struct(Struct),
     Bool(bool),
+    Json(JsonValue),
 }
 
 impl Value {
@@ -55,6 +56,7 @@ impl Value {
             Value::Function(_) => true,
             Value::BuiltInFunction(_) => true,
             Value::Bool(b) => *b,
+            Value::Json(j) => j.value != serde_json::Value::Null,
         }
     }
 
@@ -692,6 +694,14 @@ impl BuiltInFunction {
             "__rand_shuffle" => crate::builtins::random::shuffle(args),
             "__rand_uuid" => crate::builtins::random::uuid(args),
 
+            // std::json  JSON
+            "__json_parse" => crate::builtins::json::parse(args),
+            "__json_stringify" => crate::builtins::json::stringify(args),
+            "__json_stringify_pretty" => crate::builtins::json::stringify_pretty(args),
+            "__json_get" => crate::builtins::json::get(args),
+            "__json_set" => crate::builtins::json::set(args),
+            "__json_has_key" => crate::builtins::json::has_key(args),
+
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(
                     crate::position::Position::new(0, 0, 0, "", ""),
@@ -1070,5 +1080,17 @@ impl Struct {
 
     pub fn set_field(&mut self, name: String, value: Value) {
         self.fields.insert(name, value);
+    }
+}
+
+/// JSON value wrapper
+#[derive(Debug, Clone)]
+pub struct JsonValue {
+    pub value: serde_json::Value,
+}
+
+impl JsonValue {
+    pub fn new(value: serde_json::Value) -> Self {
+        Self { value }
     }
 }
