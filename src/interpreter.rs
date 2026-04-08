@@ -120,9 +120,7 @@ impl Interpreter {
             Value::BuiltInFunction(BuiltInFunction::new("run")),
         );
 
-        // File system built-ins (prefixed with __ for internal use)
-
-        // fs
+        // std::fs  File System
         global.set(
             "__fs_read".to_string(),
             Value::BuiltInFunction(BuiltInFunction::new("__fs_read")),
@@ -172,7 +170,7 @@ impl Interpreter {
             Value::BuiltInFunction(BuiltInFunction::new("__fs_copy")),
         );
 
-        // path
+        // std::path  Path
         global.set(
             "__path_join".to_string(),
             Value::BuiltInFunction(BuiltInFunction::new("__path_join")),
@@ -216,6 +214,32 @@ impl Interpreter {
         global.set(
             "__path_parent".to_string(),
             Value::BuiltInFunction(BuiltInFunction::new("__path_parent")),
+        );
+
+        // std::time  Time
+        global.set(
+            "__time_timestamp".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_timestamp")),
+        );
+        global.set(
+            "__time_timestamp_ms".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_timestamp_ms")),
+        );
+        global.set(
+            "__time_sleep".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_sleep")),
+        );
+        global.set(
+            "__time_sleep_sec".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_sleep_sec")),
+        );
+        global.set(
+            "__time_duration_secs".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_duration_secs")),
+        );
+        global.set(
+            "__time_duration_ms".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__time_duration_ms")),
         );
 
         Self {

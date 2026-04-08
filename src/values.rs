@@ -607,7 +607,7 @@ impl BuiltInFunction {
             "len" => self.len(args),
             "run" => self.run(args, interpreter),
 
-            // fs
+            // std::fs  File System
             "__fs_read" => crate::builtins::fs::read(args),
             "__fs_write" => crate::builtins::fs::write(args),
             "__fs_append" => crate::builtins::fs::append(args),
@@ -621,7 +621,7 @@ impl BuiltInFunction {
             "__fs_list_dir" => crate::builtins::fs::list_dir(args),
             "__fs_copy" => crate::builtins::fs::copy(args),
 
-            // Path
+            // std::path  Path
             "__path_join" => crate::builtins::path::join(args),
             "__path_basename" => crate::builtins::path::basename(args),
             "__path_dirname" => crate::builtins::path::dirname(args),
@@ -633,6 +633,14 @@ impl BuiltInFunction {
             "__path_normalize" => crate::builtins::path::normalize(args),
             "__path_components" => crate::builtins::path::components(args),
             "__path_parent" => crate::builtins::path::parent(args),
+
+            // std::time  Time
+            "__time_timestamp" => crate::builtins::time::timestamp(args),
+            "__time_timestamp_ms" => crate::builtins::time::timestamp_ms(args),
+            "__time_sleep" => crate::builtins::time::sleep(args),
+            "__time_sleep_sec" => crate::builtins::time::sleep_sec(args),
+            "__time_duration_secs" => crate::builtins::time::duration_secs(args),
+            "__time_duration_ms" => crate::builtins::time::duration_ms(args),
 
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(

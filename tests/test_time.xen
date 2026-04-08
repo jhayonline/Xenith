@@ -1,0 +1,72 @@
+grab { timestamp, timestamp_ms, sleep, sleep_sec, duration_secs, duration_ms } from "std::time"
+
+echo("=== Time Module Test ===\n")
+
+# Test timestamp
+echo("1. Current timestamp:")
+spawn ts: int = timestamp()
+echo("   Seconds since epoch: {ts}\n")
+
+# Test timestamp_ms
+echo("2. Current timestamp (milliseconds):")
+spawn ts_ms: int = timestamp_ms()
+echo("   Milliseconds since epoch: {ts_ms}\n")
+
+# Test sleep and duration
+echo("3. Measuring sleep duration:")
+spawn start: int = timestamp_ms()
+echo("   Start: {start} ms")
+
+echo("   Sleeping for 500ms...")
+sleep(500)
+
+spawn end: int = timestamp_ms()
+echo("   End: {end} ms")
+
+spawn elapsed_ms: int = duration_ms(start, end)
+spawn elapsed_sec: float = duration_secs(start, end)
+
+echo("   Elapsed: {elapsed_ms} ms")
+echo("   Elapsed: {elapsed_sec} seconds\n")
+
+# Test sleep_sec
+echo("4. Sleep for 1 second:")
+spawn start_sec: int = timestamp_ms()
+echo("   Start: {start_sec} ms")
+
+echo("   Sleeping for 1 second...")
+sleep_sec(1)
+
+spawn end_sec: int = timestamp_ms()
+spawn elapsed: int = duration_ms(start_sec, end_sec)
+echo("   Elapsed: {elapsed} ms\n")
+
+# Test multiple sleeps
+echo("5. Multiple short sleeps:")
+spawn total_start: int = timestamp_ms()
+
+for i = 0 to 3 {
+    echo("   Iteration {i + 1}: sleeping 100ms")
+    sleep(100)
+}
+
+spawn total_end: int = timestamp_ms()
+spawn total_ms: int = duration_ms(total_start, total_end)
+echo("   Total elapsed: {total_ms} ms\n")
+
+# Test performance measurement
+echo("6. Measure operation time:")
+spawn op_start: int = timestamp_ms()
+
+# Simulate some work
+spawn sum: int = 0
+for i = 0 to 10000 {
+    sum = sum + i
+}
+
+spawn op_end: int = timestamp_ms()
+spawn op_time: int = duration_ms(op_start, op_end)
+echo("   Sum of 0-9999: {sum}")
+echo("   Computation took: {op_time} ms\n")
+
+echo("=== All tests completed! ===")

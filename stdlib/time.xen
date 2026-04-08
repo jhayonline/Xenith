@@ -1,0 +1,28 @@
+# Standard Library: Time Operations
+# Provides timestamps, sleep, and duration utilities
+
+export method timestamp() -> int {
+    release __time_timestamp() as int
+}
+
+export method timestamp_ms() -> int {
+    release __time_timestamp_ms() as int
+}
+
+export method sleep(ms: int) -> null {
+    __time_sleep(ms)
+    release null
+}
+
+export method sleep_sec(seconds: int) -> null {
+    __time_sleep_sec(seconds)
+    release null
+}
+
+export method duration_secs(start_ms: int, end_ms: int) -> float {
+    release __time_duration_secs(start_ms, end_ms)
+}
+
+export method duration_ms(start_ms: int, end_ms: int) -> int {
+    release __time_duration_ms(start_ms, end_ms) as int
+}
