@@ -75,6 +75,12 @@ impl SymbolTable {
         self.symbols.borrow_mut().remove(name)
     }
 
+    /// Sets a value and its declared type in the current symbol table
+    pub fn set_with_type(&self, name: String, value: Value, typ: Type) {
+        self.symbols.borrow_mut().insert(name.clone(), value);
+        self.types.borrow_mut().insert(name, typ);
+    }
+
     /// Updates a variable in the scope it was originally defined, or sets in current scope if not found
     pub fn set_existing(&self, name: String, value: Value) {
         // Check current scope first
@@ -108,6 +114,22 @@ impl SymbolTable {
         } else {
             false
         }
+    }
+
+    /// Gets the declared type of a variable (searching parents)
+    pub fn get_declared_type(&self, name: &str) -> Option<Type> {
+        if let Some(typ) = self.types.borrow().get(name) {
+            Some(typ.clone())
+        } else if let Some(parent) = &self.parent {
+            parent.get_declared_type(name)
+        } else {
+            None
+        }
+    }
+
+    /// Sets the declared type of a variable in the current scope
+    pub fn set_declared_type(&self, name: String, typ: Type) {
+        self.types.borrow_mut().insert(name, typ);
     }
 }
 

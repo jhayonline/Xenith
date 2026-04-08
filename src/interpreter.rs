@@ -16,10 +16,12 @@ use crate::parser::Parser;
 use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
 use crate::symbol_table::SymbolTable;
+use crate::types::Type;
 use crate::utils::{value_to_interpolated_string, value_to_string};
 use crate::values::{
     BuiltInFunction, CaughtError, Function, List, Map, Number, Value, XenithString,
 };
+
 use std::collections::HashMap;
 
 // Struct info for method lookup
@@ -865,14 +867,73 @@ impl Interpreter {
             return result;
         }
 
-        // Use set_existing to update the variable in its original scope,
-        // or create it in current scope if it doesn't exist
-        // Note: set_existing now takes &self, so we don't need &mut
-        context
-            .symbol_table
-            .set_existing(var_name.clone(), value.clone());
+        // Check if this is a new variable declaration (has type annotation)
+        if let Some(var_type) = &node.var_type {
+            // Check if the value type matches the declared type
+            if !Self::value_matches_type(&value, var_type) {
+                return RuntimeResult::new().failure(Error::type_mismatch(
+                    &var_type.to_string(),
+                    &Self::get_type_name(&value),
+                    node.position_start.clone(),
+                    node.position_end.clone(),
+                ));
+            }
+            // Store with type
+            context
+                .symbol_table
+                .set_with_type(var_name.clone(), value.clone(), var_type.clone());
+        } else {
+            // Reassignment - use existing type or create without type (legacy)
+            context
+                .symbol_table
+                .set_existing(var_name.clone(), value.clone());
+        }
 
         result.success(value)
+    }
+
+    /// Check if a value matches an expected type
+    fn value_matches_type(value: &Value, expected_type: &Type) -> bool {
+        match (value, expected_type) {
+            (Value::Number(n), Type::Int) => n.value.fract() == 0.0,
+            (Value::Number(_), Type::Float) => true,
+            (Value::String(_), Type::String) => true,
+            (Value::Bool(_), Type::Bool) => true,
+            (Value::List(l), Type::List(elem_type)) => l
+                .elements
+                .iter()
+                .all(|v| Self::value_matches_type(v, elem_type)),
+            (Value::Map(m), Type::Map(key_type, val_type)) => {
+                // Keys are always strings in runtime
+                m.pairs
+                    .values()
+                    .all(|v| Self::value_matches_type(v, val_type))
+            }
+            (Value::Struct(s), Type::Struct(name, _)) => &s.name == name,
+            (Value::Json(_), Type::Json) => true,
+            _ => false,
+        }
+    }
+
+    /// Get a string name for a value's type
+    fn get_type_name(value: &Value) -> String {
+        match value {
+            Value::Number(n) => {
+                if n.value.fract() == 0.0 {
+                    "int".to_string()
+                } else {
+                    "float".to_string()
+                }
+            }
+            Value::String(_) => "string".to_string(),
+            Value::Bool(_) => "bool".to_string(),
+            Value::List(_) => "list".to_string(),
+            Value::Map(_) => "map".to_string(),
+            Value::Struct(s) => format!("struct {}", s.name),
+            Value::Function(_) => "function".to_string(),
+            Value::BuiltInFunction(_) => "builtin".to_string(),
+            Value::Json(_) => "json".to_string(),
+        }
     }
 
     fn visit_binary_op(
