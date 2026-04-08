@@ -25,6 +25,7 @@ pub enum Value {
     BuiltInFunction(BuiltInFunction),
     Map(Map),
     Struct(Struct),
+    Bool(bool),
 }
 
 impl Value {
@@ -53,6 +54,7 @@ impl Value {
             Value::Struct(s) => !s.fields.is_empty(),
             Value::Function(_) => true,
             Value::BuiltInFunction(_) => true,
+            Value::Bool(b) => *b,
         }
     }
 
@@ -246,6 +248,7 @@ impl Value {
                         })
                 }
             }
+            (Value::Bool(a), Value::Bool(b)) => a == b,
             _ => false,
         };
         Ok(Value::Number(Number::new(if result { 1.0 } else { 0.0 })))
@@ -348,20 +351,8 @@ impl Value {
     /// Greater than or equal comparison
     pub fn greater_than_or_equal(&self, other: &Value) -> Result<Value, Error> {
         match (self, other) {
-            (Value::Number(a), Value::Number(b)) => {
-                Ok(Value::Number(Number::new(if a.value >= b.value {
-                    1.0
-                } else {
-                    0.0
-                })))
-            }
-            (Value::String(a), Value::String(b)) => {
-                Ok(Value::Number(Number::new(if a.value >= b.value {
-                    1.0
-                } else {
-                    0.0
-                })))
-            }
+            (Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a.value >= b.value)),
+            (Value::String(a), Value::String(b)) => Ok(Value::Bool(a.value >= b.value)),
             _ => Err(RuntimeError::new(
                 Self::dummy_pos(),
                 Self::dummy_pos(),
@@ -374,11 +365,11 @@ impl Value {
 
     /// Logical NOT
     pub fn logical_not(&self) -> Result<Value, Error> {
-        Ok(Value::Number(Number::new(if self.is_true() {
-            0.0
-        } else {
-            1.0
-        })))
+        match self {
+            Value::Bool(b) => Ok(Value::Bool(!b)),
+            Value::Number(n) => Ok(Value::Bool(n.value == 0.0)),
+            _ => Ok(Value::Bool(!self.is_true())),
+        }
     }
 
     /// Negative value

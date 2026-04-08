@@ -438,7 +438,7 @@ pub struct StructFieldNode {
 #[derive(Debug, Clone)]
 pub struct ImplNode {
     pub struct_name: Token,
-    pub methods: Vec<FuncDefNode>,
+    pub methods: Vec<Box<FuncDefNode>>,
     pub position_start: Position,
     pub position_end: Position,
 }

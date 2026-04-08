@@ -253,13 +253,27 @@ impl Lexer {
                         self.advance();
                     }
                     ':' => {
-                        tokens.push(Token::new(
-                            TokenType::Colon,
-                            None,
-                            self.position.clone(),
-                            None,
-                        ));
-                        self.advance();
+                        if self.peek() == Some(':') {
+                            // Double colon ::
+                            let pos_start = self.position.copy();
+                            self.advance(); // consume first ':'
+                            self.advance(); // consume second ':'
+                            tokens.push(Token::new(
+                                TokenType::ColonColon,
+                                None,
+                                pos_start,
+                                Some(self.position.clone()),
+                            ));
+                        } else {
+                            // Single colon
+                            tokens.push(Token::new(
+                                TokenType::Colon,
+                                None,
+                                self.position.clone(),
+                                None,
+                            ));
+                            self.advance();
+                        }
                     }
                     '!' if self.peek() == Some('=') => match self.make_not_equals() {
                         Ok(token) => tokens.push(token),

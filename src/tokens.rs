@@ -59,6 +59,7 @@ pub enum TokenType {
     Question,
     FatArrow, // =>
     Colon,
+    ColonColon, // ::
     Comma,
     Dot,   // . for method calls
     Arrow, // ->

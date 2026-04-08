@@ -1,0 +1,27 @@
+struct User {
+    name: string,
+    age: int
+}
+
+impl User {
+    method greet(self: Self) -> string {
+        release "Hello, " + self.name
+    }
+    
+    method isAdult(self: Self) -> bool {
+        release self.age >= 18
+    }
+    
+    method birthday(self: Self) -> null {
+        self.age = self.age + 1
+        release null
+    }
+}
+
+spawn user: User = User { name: "Alice", age: 25 }
+
+echo(User::greet(user))
+echo("Is adult? {User::isAdult(user)}")
+
+User::birthday(user)
+echo("After birthday: {user.age}")

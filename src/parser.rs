@@ -9,12 +9,14 @@ use crate::parse_result::ParseResult;
 use crate::position::Position;
 use crate::tokens::{Token, TokenType};
 use crate::types::{FunctionType, Type};
+use std::collections::HashMap;
 
 /// Recursive descent parser for Xenith
 #[derive(Debug)]
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub token_index: usize,
+    pub struct_registry: HashMap<String, StructInfo>,
 }
 
 impl Parser {
@@ -23,6 +25,7 @@ impl Parser {
         Self {
             tokens,
             token_index: 0,
+            struct_registry: HashMap::new(),
         }
     }
 
@@ -512,8 +515,14 @@ impl Parser {
             .map(|t| t.position_start.clone())
             .unwrap_or_else(Self::dummy_pos);
 
-        // Check for match statement FIRST (before other checks)
-        // // Check for type alias
+        // Check for impl block FIRST
+        if let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::TypeImpl {
+                return self.impl_block();
+            }
+        }
+
+        // Check for type alias
         if let Some(tok) = self.current_token() {
             if tok.kind == TokenType::TypeAlias {
                 return self.type_alias();
@@ -558,7 +567,7 @@ impl Parser {
         if let Some(tok) = self.current_token() {
             if tok.matches(TokenType::Keyword, Some("release")) {
                 self.advance();
-                let expr = result.try_register(&self.expr());
+                let expr = result.register(&self.expr());
                 let pos_end = self
                     .current_token()
                     .map(|t| t.position_end.clone())
@@ -884,33 +893,22 @@ impl Parser {
             if tok.kind == TokenType::Identifier {
                 if let Some(dot) = self.peek_token() {
                     if dot.kind == TokenType::Dot {
-                        // Parse the field access/method call
                         let call_result = self.call();
                         if call_result.error.is_some() {
-                            return call_result;
-                        }
-
-                        // Check if after the field access we have an '='
-                        if let Some(eq) = self.current_token() {
+                            // Reset and fall through
+                            self.token_index = start_index;
+                        } else if let Some(eq) = self.current_token() {
                             if eq.kind == TokenType::Eq {
+                                // Field assignment path
                                 let eq_token = eq.clone();
-                                self.advance(); // consume '='
+                                self.advance();
 
-                                // Parse the value
                                 let value_result = self.expr();
                                 if value_result.error.is_some() {
                                     return value_result;
                                 }
                                 let value = value_result.node.unwrap();
-
-                                // Get the field access node from call_result
-                                let field_node = if let Some(node) = call_result.node {
-                                    node
-                                } else {
-                                    return call_result;
-                                };
-
-                                // Create an assignment node for the field
+                                let field_node = call_result.node.unwrap();
                                 let pos_end = value.position_end().clone();
 
                                 let assign_node =
@@ -925,11 +923,14 @@ impl Parser {
                                     }));
 
                                 return ParseResult::new().success(assign_node);
+                            } else {
+                                // Not an assignment — reset and fall through to ternary_expr
+                                self.token_index = start_index;
                             }
+                        } else {
+                            // No next token — reset and fall through
+                            self.token_index = start_index;
                         }
-
-                        // Not an assignment, return the call result
-                        return call_result;
                     }
                 }
             }
@@ -3014,6 +3015,58 @@ impl Parser {
 
                     self.advance();
 
+                    // Check for static method call: Identifier::method
+                    if let Some(cc) = self.current_token() {
+                        if cc.kind == TokenType::ColonColon {
+                            self.advance(); // consume '::'
+
+                            let method_name = match self.current_token() {
+                                Some(t) if t.kind == TokenType::Identifier => {
+                                    let name = t.value.clone().unwrap();
+                                    self.advance();
+                                    name
+                                }
+                                Some(t) => {
+                                    return result.failure(
+                                        InvalidSyntaxError::new(
+                                            t.position_start.clone(),
+                                            t.position_end.clone(),
+                                            "Expected method name after '::'",
+                                        )
+                                        .base,
+                                    );
+                                }
+                                None => {
+                                    return result.failure(
+                                        InvalidSyntaxError::new(
+                                            Self::dummy_pos(),
+                                            Self::dummy_pos(),
+                                            "Expected method name after '::'",
+                                        )
+                                        .base,
+                                    );
+                                }
+                            };
+
+                            let combined = format!("{}::{}", struct_name, method_name);
+                            let node = Node::VarAccess(VarAccessNode {
+                                variable_name_token: Token::new(
+                                    TokenType::Identifier,
+                                    Some(combined),
+                                    struct_pos_start.clone(),
+                                    Some(
+                                        self.current_token()
+                                            .map(|t| t.position_start.clone())
+                                            .unwrap_or(struct_pos_end.clone()),
+                                    ),
+                                ),
+                                position_start: struct_pos_start,
+                                position_end: struct_pos_end,
+                            });
+                            return result.success(node);
+                        }
+                    }
+
                     // Check if this is a struct instantiation (followed by {} ON THE SAME LINE)
                     if let Some(lbrace) = self.current_token() {
                         if lbrace.kind == TokenType::LBrace
@@ -4272,6 +4325,10 @@ impl Parser {
         };
         self.advance();
 
+        // Register the struct
+        let struct_name_str = struct_name.value.as_ref().unwrap();
+        self.register_struct(struct_name_str);
+
         // Expect '{'
         match self.current_token() {
             Some(t) if t.kind == TokenType::LBrace => {
@@ -4409,5 +4466,205 @@ impl Parser {
             position_start: pos_start,
             position_end: pos_end,
         })))
+    }
+
+    pub fn register_struct(&mut self, struct_name: &str) {
+        if !self.struct_registry.contains_key(struct_name) {
+            self.struct_registry.insert(
+                struct_name.to_string(),
+                StructInfo::new(struct_name.to_string()),
+            );
+        }
+    }
+
+    pub fn struct_exists(&self, name: &str) -> bool {
+        self.struct_registry.contains_key(name)
+    }
+
+    fn impl_block(&mut self) -> ParseResult {
+        let mut result = ParseResult::new();
+        let pos_start = self.current_token().unwrap().position_start.clone();
+
+        // Consume 'impl'
+        self.advance();
+
+        // Parse struct name
+        let struct_name = match self.current_token() {
+            Some(t) if t.kind == TokenType::Identifier => {
+                let name = t.clone();
+                self.advance();
+                name
+            }
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected struct name after 'impl'",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        Self::dummy_pos(),
+                        Self::dummy_pos(),
+                        "Expected struct name after 'impl'",
+                    )
+                    .base,
+                );
+            }
+        };
+
+        let struct_name_str = struct_name.value.as_ref().unwrap();
+
+        // Check if struct exists
+        if !self.struct_exists(struct_name_str) {
+            return result.failure(
+                InvalidSyntaxError::new(
+                    struct_name.position_start.clone(),
+                    struct_name.position_end.clone(),
+                    &format!("Struct '{}' not defined before impl block", struct_name_str),
+                )
+                .base,
+            );
+        }
+
+        // Expect '{'
+        match self.current_token() {
+            Some(t) if t.kind == TokenType::LBrace => {
+                self.advance();
+            }
+            Some(t) => {
+                return result.failure(
+                    InvalidSyntaxError::new(
+                        t.position_start.clone(),
+                        t.position_end.clone(),
+                        "Expected '{'",
+                    )
+                    .base,
+                );
+            }
+            None => {
+                return result.failure(
+                    InvalidSyntaxError::new(Self::dummy_pos(), Self::dummy_pos(), "Expected '{'")
+                        .base,
+                );
+            }
+        }
+
+        let mut methods = Vec::new();
+
+        // Parse methods inside the impl block
+        loop {
+            // Skip newlines
+            while let Some(t) = self.current_token() {
+                if t.kind == TokenType::Newline {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
+            // Check for closing brace
+            if let Some(t) = self.current_token() {
+                if t.kind == TokenType::RBrace {
+                    self.advance();
+                    break;
+                }
+            }
+
+            // Parse method definition (reuse func_def)
+            let method_result = self.func_def();
+            if method_result.error.is_some() {
+                return method_result;
+            }
+
+            if let Some(method_node) = method_result.node {
+                if let Node::FuncDef(func_def) = method_node {
+                    // Validate that the first parameter is 'self: Self'
+                    if func_def.param_names.is_empty() {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                pos_start.clone(),
+                                pos_start.clone(),
+                                "Impl methods must have 'self: Self' as first parameter",
+                            )
+                            .base,
+                        );
+                    }
+
+                    let first_param = &func_def.param_names[0];
+                    let first_param_name = first_param.value.as_ref().unwrap();
+
+                    if first_param_name != "self" {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                first_param.position_start.clone(),
+                                first_param.position_end.clone(),
+                                "First parameter of impl method must be 'self'",
+                            )
+                            .base,
+                        );
+                    }
+
+                    // Check that the type is Self (or the struct name)
+                    if func_def.param_types.is_empty() {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                first_param.position_start.clone(),
+                                first_param.position_end.clone(),
+                                "Parameter 'self' must have type annotation",
+                            )
+                            .base,
+                        );
+                    }
+
+                    // Store the method
+                    methods.push(func_def);
+                }
+            }
+        }
+
+        let pos_end = self
+            .current_token()
+            .map(|t| t.position_end.clone())
+            .unwrap_or(pos_start.clone());
+
+        result.success(Node::Impl(Box::new(ImplNode {
+            struct_name,
+            methods,
+            position_start: pos_start,
+            position_end: pos_end,
+        })))
+    }
+}
+
+// Struct registry for tracking struct definitions and their methods
+#[derive(Debug, Clone)]
+pub struct StructInfo {
+    pub name: String,
+    pub methods: HashMap<String, crate::nodes::FuncDefNode>,
+}
+
+impl StructInfo {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            methods: HashMap::new(),
+        }
+    }
+
+    pub fn add_method(&mut self, method: crate::nodes::FuncDefNode) {
+        if let Some(name) = &method.variable_name_token {
+            if let Some(method_name) = &name.value {
+                self.methods.insert(method_name.clone(), method);
+            }
+        }
+    }
+
+    pub fn get_method(&self, name: &str) -> Option<&crate::nodes::FuncDefNode> {
+        self.methods.get(name)
     }
 }

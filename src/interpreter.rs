@@ -20,6 +20,27 @@ use crate::utils::{value_to_interpolated_string, value_to_string};
 use crate::values::{
     BuiltInFunction, CaughtError, Function, List, Map, Number, Value, XenithString,
 };
+use std::collections::HashMap;
+
+// Struct info for method lookup
+#[derive(Debug, Clone)]
+pub struct StructMethodInfo {
+    pub name: String,
+    pub methods: HashMap<String, Box<crate::nodes::FuncDefNode>>,
+}
+
+impl StructMethodInfo {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            methods: HashMap::new(),
+        }
+    }
+
+    pub fn get_method(&self, name: &str) -> Option<&Box<crate::nodes::FuncDefNode>> {
+        self.methods.get(name)
+    }
+}
 
 /// Main interpreter that traverses and executes the AST
 pub struct Interpreter {
@@ -27,6 +48,7 @@ pub struct Interpreter {
     pub global_symbol_table: SymbolTable,
     /// Module registry for caching loaded modules
     pub module_registry: Option<ModuleRegistry>,
+    pub struct_registry: HashMap<String, StructMethodInfo>,
 }
 
 impl Interpreter {
@@ -101,6 +123,7 @@ impl Interpreter {
         Self {
             global_symbol_table: global,
             module_registry: None,
+            struct_registry: HashMap::new(),
         }
     }
 
@@ -206,12 +229,28 @@ impl Interpreter {
     }
 
     fn visit_impl(&mut self, node: &ImplNode, context: &mut Context) -> RuntimeResult {
-        // TODO: Implement impl block
+        let struct_name = node.struct_name.value.as_ref().unwrap().clone();
+
+        // Get or create StructMethodInfo for this struct
+        let struct_info = self
+            .struct_registry
+            .entry(struct_name.clone())
+            .or_insert_with(|| StructMethodInfo::new(struct_name.clone()));
+
+        for method in &node.methods {
+            if let Some(name) = &method.variable_name_token {
+                if let Some(method_name) = &name.value {
+                    struct_info
+                        .methods
+                        .insert(method_name.clone(), method.clone());
+                }
+            }
+        }
+
         RuntimeResult::new().success(Value::Number(Number::null()))
     }
 
     fn visit_type_alias(&mut self, node: &TypeAliasNode, context: &mut Context) -> RuntimeResult {
-        // TODO: Implement type alias
         RuntimeResult::new().success(Value::Number(Number::null()))
     }
 
@@ -228,12 +267,7 @@ impl Interpreter {
         node: &BoolLiteralNode,
         _context: &mut Context,
     ) -> RuntimeResult {
-        let value = if node.value {
-            Value::Number(Number::true_val())
-        } else {
-            Value::Number(Number::false_val())
-        };
-        RuntimeResult::new().success(value)
+        RuntimeResult::new().success(Value::Bool(node.value))
     }
 
     fn visit_export(
@@ -1062,6 +1096,7 @@ impl Interpreter {
                             })
                     }
                 }
+                (Value::Bool(a), Value::Bool(b)) => a == b,
                 _ => false,
             };
 
@@ -1469,6 +1504,124 @@ impl Interpreter {
     ) -> RuntimeResult {
         let mut result = RuntimeResult::new();
 
+        // Check if this is a static method call (format: "StructName::methodName")
+        if let Node::VarAccess(var_node) = &*node.node_to_call {
+            let call_name = var_node.variable_name_token.value.as_ref().unwrap();
+            if call_name.contains("::") {
+                let parts: Vec<&str> = call_name.split("::").collect();
+                if parts.len() == 2 {
+                    let struct_name = parts[0].to_string();
+                    let method_name = parts[1].to_string();
+
+                    // Clone the method before borrowing self again
+                    let method_clone = {
+                        if let Some(struct_info) = self.struct_registry.get(&struct_name) {
+                            if let Some(method) = struct_info.get_method(&method_name) {
+                                Some(method.clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    };
+
+                    if let Some(method) = method_clone {
+                        // Evaluate arguments
+                        let mut args = Vec::new();
+                        for arg_node in &node.argument_nodes {
+                            let arg = result.register(self.visit(arg_node, context));
+                            if result.should_return() {
+                                return result;
+                            }
+                            args.push(arg);
+                        }
+
+                        // The first argument should be the instance (self)
+                        if args.is_empty() {
+                            return result.failure(
+                                RuntimeError::new(
+                                    node.position_start.clone(),
+                                    node.position_end.clone(),
+                                    &format!("Method '{}' requires self argument", method_name),
+                                    Some(context.clone()),
+                                )
+                                .base,
+                            );
+                        }
+
+                        let instance = args[0].clone();
+                        let mut method_context = context.create_child(
+                            &format!("{}::{}", struct_name, method_name),
+                            node.position_start.clone(),
+                        );
+
+                        // Bind 'self' parameter
+                        method_context
+                            .symbol_table
+                            .set_local("self".to_string(), instance);
+
+                        // Bind remaining parameters (skip self)
+                        for (i, param_name) in method.param_names.iter().enumerate() {
+                            if i == 0 {
+                                continue; // Skip self, already bound
+                            }
+                            let param_name_str = param_name.value.as_ref().unwrap();
+                            if i - 1 < args.len() - 1 {
+                                method_context
+                                    .symbol_table
+                                    .set_local(param_name_str.clone(), args[i].clone());
+                            }
+                        }
+
+                        // Execute the method body
+                        let exec_result = self.visit(&method.body_node, &mut method_context);
+
+                        if let Some(err) = exec_result.error {
+                            return RuntimeResult::new().failure(err);
+                        }
+
+                        // Write mutated self back to the caller's variable
+                        if let Some(arg_node) = node.argument_nodes.get(0) {
+                            if let Node::VarAccess(var_node) = arg_node.as_ref() {
+                                let var_name =
+                                    var_node.variable_name_token.value.as_ref().unwrap().clone();
+                                if let Some(updated_self) = method_context.symbol_table.get("self")
+                                {
+                                    context
+                                        .symbol_table
+                                        .set_existing(var_name, updated_self.clone());
+                                }
+                            }
+                        }
+
+                        if let Some(ret_val) = exec_result.func_return_value {
+                            return RuntimeResult::new().success(ret_val);
+                        }
+
+                        if let Some(val) = exec_result.value {
+                            return RuntimeResult::new().success(val);
+                        }
+
+                        return RuntimeResult::new().success(Value::Number(Number::null()));
+                    } else {
+                        return result.failure(
+                            RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!(
+                                    "Method '{}' not found for struct '{}'",
+                                    method_name, struct_name
+                                ),
+                                Some(context.clone()),
+                            )
+                            .base,
+                        );
+                    }
+                }
+            }
+        }
+
         // Check if this is a method call (node_to_call is a MethodAccess)
         if let Node::MethodAccess(method_node) = &*node.node_to_call {
             // Check if the object is a variable access (so we can update it)
@@ -1507,8 +1660,6 @@ impl Interpreter {
             // If this is a method that modifies the object (like append),
             // update the variable in the context
             if let Some(name) = var_name {
-                // For append, we want to update the variable with the new list
-                // For pop, we don't (pop returns the popped value)
                 if method_name == "append" {
                     context.symbol_table.set(name, value.clone());
                 }
