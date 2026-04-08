@@ -884,8 +884,52 @@ impl Parser {
             if tok.kind == TokenType::Identifier {
                 if let Some(dot) = self.peek_token() {
                     if dot.kind == TokenType::Dot {
-                        // This looks like a method call, let call() handle it
-                        return self.call();
+                        // Parse the field access/method call
+                        let call_result = self.call();
+                        if call_result.error.is_some() {
+                            return call_result;
+                        }
+
+                        // Check if after the field access we have an '='
+                        if let Some(eq) = self.current_token() {
+                            if eq.kind == TokenType::Eq {
+                                let eq_token = eq.clone();
+                                self.advance(); // consume '='
+
+                                // Parse the value
+                                let value_result = self.expr();
+                                if value_result.error.is_some() {
+                                    return value_result;
+                                }
+                                let value = value_result.node.unwrap();
+
+                                // Get the field access node from call_result
+                                let field_node = if let Some(node) = call_result.node {
+                                    node
+                                } else {
+                                    return call_result;
+                                };
+
+                                // Create an assignment node for the field
+                                let pos_end = value.position_end().clone();
+
+                                let assign_node =
+                                    Node::BinaryOperator(Box::new(BinaryOperatorNode {
+                                        left_node: Box::new(field_node),
+                                        operator_token: eq_token,
+                                        right_node: Box::new(value),
+                                        position_start: self.tokens[start_index]
+                                            .position_start
+                                            .clone(),
+                                        position_end: pos_end,
+                                    }));
+
+                                return ParseResult::new().success(assign_node);
+                            }
+                        }
+
+                        // Not an assignment, return the call result
+                        return call_result;
                     }
                 }
             }
@@ -893,7 +937,7 @@ impl Parser {
 
         self.token_index = start_index;
 
-        // Try to parse a field access
+        // Try to parse a field access (for simple cases without nested dots)
         if let Some(mut node) = self.try_parse_field_access() {
             // Check if next token is '='
             if let Some(eq) = self.current_token() {
@@ -2925,11 +2969,6 @@ impl Parser {
 
                     // Check if this is a struct instantiation (followed by {} ON THE SAME LINE)
                     if let Some(lbrace) = self.current_token() {
-                        eprintln!(
-                            "DEBUG atom: Checking for struct instantiation, next token = {:?}, line match = {}",
-                            lbrace.kind,
-                            lbrace.position_start.line == struct_pos_end.line
-                        );
                         if lbrace.kind == TokenType::LBrace
                             && lbrace.position_start.line == struct_pos_end.line
                         {
@@ -2965,12 +3004,7 @@ impl Parser {
                                 }
                                 _ => false,
                             };
-                            eprintln!("DEBUG atom: is_struct = {}", is_struct);
                             if is_struct {
-                                eprintln!(
-                                    "DEBUG atom: Calling struct_instantiation for '{}'",
-                                    struct_name
-                                );
                                 return self.struct_instantiation(struct_name);
                             }
                         }

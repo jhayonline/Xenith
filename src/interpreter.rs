@@ -191,7 +191,6 @@ impl Interpreter {
         context: &mut Context,
     ) -> RuntimeResult {
         let mut result = RuntimeResult::new();
-        eprintln!("DEBUG: Creating struct instance of '{}'", node.struct_name);
         let mut struct_instance = crate::values::Struct::new(node.struct_name.clone());
 
         for (field_name, value_node) in &node.fields {
@@ -200,11 +199,9 @@ impl Interpreter {
                 return result;
             }
             let name = field_name.value.as_ref().unwrap().clone();
-            eprintln!("DEBUG: Setting field '{}' = {:?}", name, value);
             struct_instance.set_field(name, value);
         }
 
-        eprintln!("DEBUG: Struct instance created: {:?}", struct_instance);
         result.success(Value::Struct(struct_instance))
     }
 
@@ -480,8 +477,6 @@ impl Interpreter {
             return result;
         }
 
-        eprintln!("DEBUG: Assigning to var '{}' value = {:?}", var_name, value);
-
         // Use set_existing to update the variable in its original scope,
         // or create it in current scope if it doesn't exist
         context
@@ -669,8 +664,6 @@ impl Interpreter {
                 );
             };
 
-            eprintln!("DEBUG: left value = {:?}", left);
-
             // Access the field
             match left {
                 Value::Struct(s) => {
@@ -704,7 +697,6 @@ impl Interpreter {
                     }
                 }
                 _ => {
-                    eprintln!("DEBUG: left is not Struct or Map, it's: {:?}", left);
                     return result.failure(
                         RuntimeError::new(
                             node.position_start.clone(),
