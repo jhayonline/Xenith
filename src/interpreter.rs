@@ -773,6 +773,98 @@ impl Interpreter {
             },
             _ if op.matches(crate::tokens::TokenType::Keyword, Some("&&")) => left.anded_by(&right),
             _ if op.matches(crate::tokens::TokenType::Keyword, Some("||")) => left.ored_by(&right),
+            _ if op.matches(crate::tokens::TokenType::Keyword, Some("as")) => {
+                // Type conversion
+                match (&left, &right) {
+                    // int -> float
+                    (Value::Number(n), Value::String(s)) if s.value == "float" => {
+                        Ok(Value::Number(Number::new(n.value)))
+                    }
+                    // float -> int (truncates)
+                    (Value::Number(n), Value::String(s)) if s.value == "int" => {
+                        Ok(Value::Number(Number::new(n.value.trunc())))
+                    }
+                    // number -> string
+                    (Value::Number(n), Value::String(s)) if s.value == "string" => {
+                        Ok(Value::String(XenithString::new(n.value.to_string())))
+                    }
+                    // number -> bool (0 = false, non-zero = true)
+                    (Value::Number(n), Value::String(s)) if s.value == "bool" => {
+                        Ok(Value::Number(Number::new(if n.value != 0.0 {
+                            1.0
+                        } else {
+                            0.0
+                        })))
+                    }
+                    // string -> int
+                    (Value::String(s), Value::String(target)) if target.value == "int" => {
+                        match s.value.parse::<i64>() {
+                            Ok(num) => Ok(Value::Number(Number::new(num as f64))),
+                            Err(_) => Err(RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!("Cannot convert string '{}' to int", s.value),
+                                Some(context.clone()),
+                            )
+                            .base),
+                        }
+                    }
+                    // string -> float
+                    (Value::String(s), Value::String(target)) if target.value == "float" => {
+                        match s.value.parse::<f64>() {
+                            Ok(num) => Ok(Value::Number(Number::new(num))),
+                            Err(_) => Err(RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!("Cannot convert string '{}' to float", s.value),
+                                Some(context.clone()),
+                            )
+                            .base),
+                        }
+                    }
+                    // string -> bool
+                    (Value::String(s), Value::String(target)) if target.value == "bool" => {
+                        let lower = s.value.to_lowercase();
+                        let result = if lower == "true" || lower == "1" {
+                            1.0
+                        } else if lower == "false" || lower == "0" {
+                            0.0
+                        } else {
+                            return RuntimeResult::new().failure(
+                                RuntimeError::new(
+                                    node.position_start.clone(),
+                                    node.position_end.clone(),
+                                    &format!("Cannot convert string '{}' to bool", s.value),
+                                    Some(context.clone()),
+                                )
+                                .base,
+                            );
+                        };
+                        Ok(Value::Number(Number::new(result)))
+                    }
+                    // bool -> int
+                    (Value::Number(n), Value::String(target)) if target.value == "int" => {
+                        // bool is stored as Number (0 or 1)
+                        Ok(Value::Number(Number::new(n.value)))
+                    }
+                    // bool -> string
+                    (Value::Number(n), Value::String(target)) if target.value == "string" => {
+                        let s = if n.value != 0.0 { "true" } else { "false" };
+                        Ok(Value::String(XenithString::new(s.to_string())))
+                    }
+                    // bool -> float
+                    (Value::Number(n), Value::String(target)) if target.value == "float" => {
+                        Ok(Value::Number(Number::new(n.value)))
+                    }
+                    _ => Err(RuntimeError::new(
+                        node.position_start.clone(),
+                        node.position_end.clone(),
+                        &format!("Cannot convert {:?} to {:?}", left, right),
+                        Some(context.clone()),
+                    )
+                    .base),
+                }
+            }
             _ => {
                 return RuntimeResult::new().failure(
                     RuntimeError::new(

@@ -2493,7 +2493,7 @@ impl Parser {
         while let Some(tok) = self.current_token().cloned() {
             let op_type = tok.kind.clone();
 
-            // Check for comparison operators AND logical operators
+            // Check for comparison operators
             let is_operator = matches!(
                 op_type,
                 TokenType::Ee
@@ -2508,20 +2508,67 @@ impl Parser {
             let is_logical = tok.matches(TokenType::Keyword, Some("&&"))
                 || tok.matches(TokenType::Keyword, Some("||"));
 
-            if !is_operator && !is_logical {
+            // Check for 'as' type conversion (keyword)
+            let is_as = tok.matches(TokenType::Keyword, Some("as"));
+
+            if !is_operator && !is_logical && !is_as {
                 break;
             }
 
             let op = tok.clone();
             self.advance();
 
-            let right = result.register(&self.arith_expr());
-            if result.error.is_some() {
-                return result;
-            }
-            let right = right.unwrap();
+            if is_as {
+                // For 'as', the right side should be a type name, not a full expression
+                // Parse the type name (int, float, string, bool)
+                let type_name = match self.current_token() {
+                    Some(t) if t.kind == TokenType::TypeInt => "int",
+                    Some(t) if t.kind == TokenType::TypeFloat => "float",
+                    Some(t) if t.kind == TokenType::TypeString => "string",
+                    Some(t) if t.kind == TokenType::TypeBool => "bool",
+                    Some(t) => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                t.position_start.clone(),
+                                t.position_end.clone(),
+                                &format!("Expected type name after 'as', got {:?}", t.kind),
+                            )
+                            .base,
+                        );
+                    }
+                    None => {
+                        return result.failure(
+                            InvalidSyntaxError::new(
+                                Self::dummy_pos(),
+                                Self::dummy_pos(),
+                                "Expected type name after 'as'",
+                            )
+                            .base,
+                        );
+                    }
+                };
 
-            left = Node::bin_op(left, op, right);
+                let type_token = self.current_token().unwrap().clone();
+                self.advance();
+
+                // Create a string node for the type name
+                let right = Node::String(StringNode::new(Token::new(
+                    TokenType::String,
+                    Some(type_name.to_string()),
+                    type_token.position_start.clone(),
+                    Some(type_token.position_end.clone()),
+                )));
+
+                left = Node::bin_op(left, op, right);
+            } else {
+                // Regular operator - parse right side as expression
+                let right = result.register(&self.arith_expr());
+                if result.error.is_some() {
+                    return result;
+                }
+                let right = right.unwrap();
+                left = Node::bin_op(left, op, right);
+            }
         }
 
         result.success(left)
