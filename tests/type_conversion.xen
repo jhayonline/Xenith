@@ -1,16 +1,16 @@
-spawn int_val: int = 42
-spawn float_val: float = int_val as float
-spawn string_val: string = int_val as string
-spawn bool_val: bool = int_val as bool
+spawn int_val: int = 42;
+spawn float_val: float = int_val as float;
+spawn string_val: string = int_val as string;
+spawn bool_val: bool = int_val as bool;
 
-echo("   int 42 -> float: {float_val}")
-echo("   int 42 -> string: {string_val}")
-echo("   int 42 -> bool: {bool_val}")
+echo("   int 42 -> float: {float_val}");
+echo("   int 42 -> string: {string_val}");
+echo("   int 42 -> bool: {bool_val}");
 
-spawn pi_val: float = 3.14159
-spawn pi_int: int = pi_val as int
-echo("   float 3.14159 -> int: {pi_int}")
+spawn pi_val: float = 3.14159;
+spawn pi_int: int = pi_val as int;
+echo("   float 3.14159 -> int: {pi_int}");
 
-spawn true_val: bool = true
-spawn true_int: int = true_val as int
-echo("   bool true -> int: {true_int}")
+spawn true_val: bool = true;
+spawn true_int: int = true_val as int;
+echo("   bool true -> int: {true_int}");
