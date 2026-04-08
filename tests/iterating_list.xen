@@ -1,0 +1,45 @@
+# test_list_iteration.xen
+
+# Test 1: Basic list iteration
+spawn fruits: list<string> = ["apple", "banana", "orange"]
+
+echo("=== Basic List Iteration ===")
+for fruit in fruits {
+    echo("Fruit: {fruit}")
+}
+
+# Test 2: List iteration with index
+spawn numbers: list<int> = [10, 20, 30, 40, 50]
+
+echo("\n=== List with Index ===")
+for i = 0 to numbers.len() {
+    echo("numbers[{i}] = {numbers[i]}")
+}
+
+# Test 3: Tuple unpacking with list of pairs
+spawn pairs: list<list<int>> = [[1, 2], [3, 4], [5, 6]]
+
+echo("\n=== Tuple Unpacking ===")
+for a, b in pairs {
+    echo("{a} + {b} = {a + b}")
+}
+
+# Test 4: While loop with list
+spawn colors: list<string> = ["red", "green", "blue"]
+spawn idx: int = 0
+
+echo("\n=== While Loop with List ===")
+while idx < colors.len() {
+    echo("Color: {colors[idx]}")
+    idx = idx + 1
+}
+
+# Test 5: Nested list iteration
+spawn matrix: list<list<int>> = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+echo("\n=== Nested List Iteration ===")
+for row in matrix {
+    for num in row {
+        echo(num)
+    }
+}
