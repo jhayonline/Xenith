@@ -1140,12 +1140,22 @@ impl Parser {
     /// Parse grab/import statement
     /// Syntax: grab { name, other as alias } from "module"
     ///         grab * as namespace from "module"
+    /// Also supports multi-line imports with newlines anywhere
     fn grab_statement(&mut self) -> ParseResult {
         let mut result = ParseResult::new();
         let pos_start = self.current_token().unwrap().position_start.clone();
 
         // Consume 'grab'
         self.advance();
+
+        // Skip newlines before '{' or '*'
+        while let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::Newline {
+                self.advance();
+            } else {
+                break;
+            }
+        }
 
         // Check for namespace import (grab * as name)
         let is_namespace_import = if let Some(tok) = self.current_token() {
@@ -1160,6 +1170,15 @@ impl Parser {
         if is_namespace_import {
             // Consume '*'
             self.advance();
+
+            // Skip newlines after '*'
+            while let Some(tok) = self.current_token() {
+                if tok.kind == TokenType::Newline {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
 
             // Expect 'as'
             match self.current_token() {
@@ -1185,6 +1204,15 @@ impl Parser {
                         )
                         .base,
                     );
+                }
+            }
+
+            // Skip newlines after 'as'
+            while let Some(tok) = self.current_token() {
+                if tok.kind == TokenType::Newline {
+                    self.advance();
+                } else {
+                    break;
                 }
             }
 
@@ -1217,13 +1245,31 @@ impl Parser {
             }
         } else {
             // Parse named imports: { name, other as alias }
+            // Skip newlines before '{'
+            while let Some(tok) = self.current_token() {
+                if tok.kind == TokenType::Newline {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
             match self.current_token() {
                 Some(tok) if tok.kind == TokenType::LBrace => {
                     self.advance(); // consume '{'
 
+                    // Skip newlines after '{'
+                    while let Some(t) = self.current_token() {
+                        if t.kind == TokenType::Newline {
+                            self.advance();
+                        } else {
+                            break;
+                        }
+                    }
+
                     // Parse import specifiers
                     loop {
-                        // Skip newlines
+                        // Skip newlines before each specifier
                         while let Some(t) = self.current_token() {
                             if t.kind == TokenType::Newline {
                                 self.advance();
@@ -1270,6 +1316,15 @@ impl Parser {
                             }
                         };
 
+                        // Skip newlines before 'as' or comma or brace
+                        while let Some(t) = self.current_token() {
+                            if t.kind == TokenType::Newline {
+                                self.advance();
+                            } else {
+                                break;
+                            }
+                        }
+
                         let name_end = self
                             .current_token()
                             .map(|t| t.position_start.clone())
@@ -1279,6 +1334,15 @@ impl Parser {
                         let alias = if let Some(tok) = self.current_token() {
                             if tok.matches(TokenType::Keyword, Some("as")) {
                                 self.advance(); // consume 'as'
+
+                                // Skip newlines after 'as'
+                                while let Some(t) = self.current_token() {
+                                    if t.kind == TokenType::Newline {
+                                        self.advance();
+                                    } else {
+                                        break;
+                                    }
+                                }
 
                                 match self.current_token() {
                                     Some(alias_tok) if alias_tok.kind == TokenType::Identifier => {
@@ -1314,6 +1378,15 @@ impl Parser {
                             None
                         };
 
+                        // Skip newlines after alias or identifier
+                        while let Some(t) = self.current_token() {
+                            if t.kind == TokenType::Newline {
+                                self.advance();
+                            } else {
+                                break;
+                            }
+                        }
+
                         imports.push(ImportSpec {
                             original_name: name,
                             alias,
@@ -1321,10 +1394,18 @@ impl Parser {
                             position_end: name_end,
                         });
 
-                        // Check for comma
+                        // Check for comma or closing brace
                         if let Some(tok) = self.current_token() {
                             if tok.kind == TokenType::Comma {
                                 self.advance();
+                                // Skip newlines after comma
+                                while let Some(t) = self.current_token() {
+                                    if t.kind == TokenType::Newline {
+                                        self.advance();
+                                    } else {
+                                        break;
+                                    }
+                                }
                                 continue;
                             } else if tok.kind == TokenType::RBrace {
                                 self.advance();
@@ -1360,6 +1441,15 @@ impl Parser {
             }
         }
 
+        // Skip newlines before 'from'
+        while let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::Newline {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
         // Expect 'from'
         match self.current_token() {
             Some(tok) if tok.matches(TokenType::Keyword, Some("from")) => {
@@ -1384,6 +1474,15 @@ impl Parser {
                     )
                     .base,
                 );
+            }
+        }
+
+        // Skip newlines after 'from'
+        while let Some(tok) = self.current_token() {
+            if tok.kind == TokenType::Newline {
+                self.advance();
+            } else {
+                break;
             }
         }
 

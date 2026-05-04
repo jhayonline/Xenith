@@ -55,14 +55,26 @@ impl ModuleRegistry {
         // Get directory of current file
         let current_dir = self.current_file.parent()?;
 
-        // Only look for .xen files
-        let candidate = current_dir.join(&file_path).with_extension("xen");
-
-        if candidate.exists() {
-            Some(candidate)
-        } else {
-            None
+        // Try multiple locations:
+        // 1. Relative to current file's directory
+        let candidate1 = current_dir.join(&file_path).with_extension("xen");
+        if candidate1.exists() {
+            return Some(candidate1);
         }
+
+        // 2. Relative to current file's parent (project root)
+        let candidate2 = current_dir.parent()?.join(&file_path).with_extension("xen");
+        if candidate2.exists() {
+            return Some(candidate2);
+        }
+
+        // 3. Just the filename in current directory
+        let candidate3 = current_dir.join(&file_path).with_extension("xen");
+        if candidate3.exists() {
+            return Some(candidate3);
+        }
+
+        None
     }
 
     fn resolve_stdlib(&self, path: &str) -> Option<PathBuf> {
@@ -71,27 +83,36 @@ impl ModuleRegistry {
         let filename = file_path + ".xen";
 
         // Try multiple locations:
-        // 1. Relative to current file (project root)
-        let current_dir = self.current_file.parent()?;
-        let project_stdlib = current_dir.join("stdlib").join(&filename);
-        eprintln!("DEBUG: Checking project_stdlib: {:?}", project_stdlib); // Add this
-        if project_stdlib.exists() {
-            return Some(project_stdlib);
+        // 1. Relative to current file's parent (project root) - most common
+        if let Some(current_dir) = self.current_file.parent() {
+            if let Some(project_root) = current_dir.parent() {
+                let project_stdlib = project_root.join("stdlib").join(&filename);
+                if project_stdlib.exists() {
+                    return Some(project_stdlib);
+                }
+            }
+
+            // 2. stdlib in current directory
+            let current_stdlib = current_dir.join("stdlib").join(&filename);
+            if current_stdlib.exists() {
+                return Some(current_stdlib);
+            }
         }
 
-        // 2. Relative to executable (for installed version)
-        let exe_path = std::env::current_exe().ok()?;
-        let exe_stdlib = exe_path.parent()?.join("stdlib").join(&filename);
-        eprintln!("DEBUG: Checking exe_stdlib: {:?}", exe_stdlib); // Add this
-        if exe_stdlib.exists() {
-            return Some(exe_stdlib);
+        // 3. Relative to executable (for installed version)
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let exe_stdlib = exe_dir.join("stdlib").join(&filename);
+                if exe_stdlib.exists() {
+                    return Some(exe_stdlib);
+                }
+            }
         }
 
-        // 3. Try just the filename in current directory
-        let local = current_dir.join(&filename);
-        eprintln!("DEBUG: Checking local: {:?}", local); // Add this
-        if local.exists() {
-            return Some(local);
+        // 4. Try just the filename in current working directory
+        let cwd_stdlib = std::env::current_dir().ok()?.join("stdlib").join(&filename);
+        if cwd_stdlib.exists() {
+            return Some(cwd_stdlib);
         }
 
         None
@@ -128,6 +149,9 @@ impl ModuleRegistry {
         }
 
         let ast = parse_result.node.unwrap();
+
+        // Transfer type aliases from parser to interpreter for this module
+        interpreter.type_aliases.extend(parser.type_aliases);
 
         // Create module context and execute
         let mut module_context = Context::new(&module_path, None, None);
