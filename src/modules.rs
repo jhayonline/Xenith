@@ -74,6 +74,7 @@ impl ModuleRegistry {
         // 1. Relative to current file (project root)
         let current_dir = self.current_file.parent()?;
         let project_stdlib = current_dir.join("stdlib").join(&filename);
+        eprintln!("DEBUG: Checking project_stdlib: {:?}", project_stdlib); // Add this
         if project_stdlib.exists() {
             return Some(project_stdlib);
         }
@@ -81,12 +82,14 @@ impl ModuleRegistry {
         // 2. Relative to executable (for installed version)
         let exe_path = std::env::current_exe().ok()?;
         let exe_stdlib = exe_path.parent()?.join("stdlib").join(&filename);
+        eprintln!("DEBUG: Checking exe_stdlib: {:?}", exe_stdlib); // Add this
         if exe_stdlib.exists() {
             return Some(exe_stdlib);
         }
 
         // 3. Try just the filename in current directory
         let local = current_dir.join(&filename);
+        eprintln!("DEBUG: Checking local: {:?}", local); // Add this
         if local.exists() {
             return Some(local);
         }

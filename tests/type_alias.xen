@@ -1,0 +1,13 @@
+# Test type aliases
+type IntFunction = method(int) -> int
+type StringList = list<string>
+type NameMap = map<string, string>
+
+# Use the type aliases
+let double: IntFunction = method(x: int) -> int => x * 2
+let names: StringList = ["Alice", "Bob", "Charlie"]
+let config: NameMap = {"host": "localhost", "port": "8080"}
+
+echo("Double 5: {double(5)}")
+echo("Names: {ret(names)}")
+echo("Host: {config["host"]}")

@@ -1,7 +1,7 @@
 # test_list_iteration.xen
 
 # Test 1: Basic list iteration
-spawn fruits: list<string> = ["apple", "banana", "orange"]
+let fruits: list<string> = ["apple", "banana", "orange"]
 
 echo("=== Basic List Iteration ===")
 for fruit in fruits {
@@ -9,7 +9,7 @@ for fruit in fruits {
 }
 
 # Test 2: List iteration with index
-spawn numbers: list<int> = [10, 20, 30, 40, 50]
+let numbers: list<int> = [10, 20, 30, 40, 50]
 
 echo("\n=== List with Index ===")
 for i = 0 to numbers.len() {
@@ -17,7 +17,7 @@ for i = 0 to numbers.len() {
 }
 
 # Test 3: Tuple unpacking with list of pairs
-spawn pairs: list<list<int>> = [[1, 2], [3, 4], [5, 6]]
+let pairs: list<list<int>> = [[1, 2], [3, 4], [5, 6]]
 
 echo("\n=== Tuple Unpacking ===")
 for a, b in pairs {
@@ -25,8 +25,8 @@ for a, b in pairs {
 }
 
 # Test 4: While loop with list
-spawn colors: list<string> = ["red", "green", "blue"]
-spawn idx: int = 0
+let colors: list<string> = ["red", "green", "blue"]
+let idx: int = 0
 
 echo("\n=== While Loop with List ===")
 while idx < colors.len() {
@@ -35,7 +35,7 @@ while idx < colors.len() {
 }
 
 # Test 5: Nested list iteration
-spawn matrix: list<list<int>> = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+let matrix: list<list<int>> = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
 echo("\n=== Nested List Iteration ===")
 for row in matrix {

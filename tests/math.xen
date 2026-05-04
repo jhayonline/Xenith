@@ -6,7 +6,7 @@ export method multiply(a: int, b: int) -> int {
     release a * b
 }
 
-export spawn PI: float = 3.14159
+export let PI: float = 3.14159
 
 # Private function
 method _helper(x: int) -> int {

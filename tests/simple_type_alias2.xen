@@ -1,0 +1,2 @@
+let x: method(int) -> int = method(y: int) -> int => y * 2
+echo(x(5))

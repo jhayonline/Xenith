@@ -492,6 +492,7 @@ impl Lexer {
             "true" => TokenType::BoolTrue,
             "false" => TokenType::BoolFalse,
             "json" => TokenType::TypeJson,
+            "any" => TokenType::TypeAny,
             _ => {
                 if KEYWORDS.contains(&id_str.as_str()) {
                     TokenType::Keyword
@@ -500,7 +501,6 @@ impl Lexer {
                 }
             }
         };
-
         Token::new(kind, Some(id_str), pos_start, Some(self.position.clone()))
     }
 

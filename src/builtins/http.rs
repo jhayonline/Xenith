@@ -63,13 +63,32 @@ fn get_headers_map(args: &[Value], index: usize) -> Option<HashMap<String, Strin
 
 fn get_body_string(args: &[Value], index: usize) -> Option<String> {
     if args.len() <= index {
+        eprintln!(
+            "DEBUG: get_body_string - args length {} <= index {}",
+            args.len(),
+            index
+        );
         return None;
     }
 
+    eprintln!(
+        "DEBUG: get_body_string - checking arg[{}] = {:?}",
+        index, args[index]
+    );
+
     match &args[index] {
-        Value::String(s) => Some(s.value.clone()),
-        Value::Json(j) => Some(j.value.to_string()),
-        _ => None,
+        Value::String(s) => {
+            eprintln!("DEBUG: get_body_string - matched String: {}", s.value);
+            Some(s.value.clone())
+        }
+        Value::Json(j) => {
+            eprintln!("DEBUG: get_body_string - matched Json: {}", j.value);
+            Some(j.value.to_string())
+        }
+        _ => {
+            eprintln!("DEBUG: get_body_string - no match");
+            None
+        }
     }
 }
 
@@ -149,6 +168,12 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
 }
 
 pub fn post(args: Vec<Value>) -> RuntimeResult {
+    // Debug: print args length and types
+    eprintln!("DEBUG: post called with {} args", args.len());
+    for (i, arg) in args.iter().enumerate() {
+        eprintln!("DEBUG: arg[{}] = {:?}", i, arg);
+    }
+
     if args.len() < 2 || args.len() > 3 {
         return RuntimeResult::new().failure(
             Error::new(
@@ -173,9 +198,17 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
         }
     };
 
-    let body = match get_body_string(&args, 1) {
+    eprintln!("DEBUG: url = {}", url);
+
+    // Debug: check what get_body_string returns
+    let body_opt = get_body_string(&args, 1);
+    eprintln!("DEBUG: get_body_string returned {:?}", body_opt);
+
+    let body = match body_opt {
         Some(b) => b,
         None => {
+            eprintln!("DEBUG: body is None, checking arg type");
+            eprintln!("DEBUG: arg[1] type = {:?}", args[1]);
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string or json",
                 "other",
@@ -184,6 +217,8 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
             ));
         }
     };
+
+    eprintln!("DEBUG: body = {}", body);
 
     let headers = get_headers_map(&args, 2).unwrap_or_default();
 

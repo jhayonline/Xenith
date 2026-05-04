@@ -33,8 +33,8 @@ echo("   atan(1) = {atan(1)}\n")
 
 # Angle conversion
 echo("4. Angle conversion:")
-spawn deg: float = 90
-spawn rad: float = radians(deg)
+let deg: float = 90
+let rad: float = radians(deg)
 echo("   {deg}° = {rad} rad")
 echo("   {rad} rad = {degrees(rad)}°\n")
 
@@ -45,7 +45,7 @@ echo("   log10(100) = {log10(100)}\n")
 
 # Statistics
 echo("6. Statistics:")
-spawn numbers: list<float> = [10, 20, 30, 40, 50]
+let numbers: list<float> = [10, 20, 30, 40, 50]
 echo("   Numbers: {ret(numbers)}")
 echo("   Sum: {sum(numbers)}")
 echo("   Average: {average(numbers)}\n")
@@ -56,7 +56,7 @@ method distance(x1: float, y1: float, x2: float, y2: float) -> float {
     release sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2))
 }
 
-spawn dist: float = distance(0, 0, 3, 4)
+let dist: float = distance(0, 0, 3, 4)
 echo("   Distance from (0,0) to (3,4) = {dist}\n")
 
 # Practical example: Circle calculations
@@ -69,7 +69,7 @@ method circle_circumference(radius: float) -> float {
     release 2 * MATH_PI * radius
 }
 
-spawn r: float = 5
+let r: float = 5
 echo("   Radius: {r}")
 echo("   Area: {circle_area(r)}")
 echo("   Circumference: {circle_circumference(r)}")

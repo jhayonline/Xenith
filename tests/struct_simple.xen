@@ -6,7 +6,7 @@ struct Person {
 }
 
 # Create a struct instance
-spawn alice: Person = Person {
+let alice: Person = Person {
     name: "Alice",
     age: 25
 }
@@ -15,7 +15,7 @@ echo("Name: {alice.name}")
 echo("Age: {alice.age}")
 
 # Create another person
-spawn bob: Person = Person {
+let bob: Person = Person {
     name: "Bob",
     age: 30
 }

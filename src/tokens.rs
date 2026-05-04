@@ -49,6 +49,7 @@ pub enum TokenType {
     BoolTrue,
     BoolFalse,
     TypeJson,
+    TypeAny,
 
     // Delimiters
     LParen,
@@ -111,7 +112,7 @@ impl Token {
 
 /// Reserved keywords in the Xenith language
 pub const KEYWORDS: &[&str] = &[
-    "spawn",
+    "let",
     "const",
     "&&",
     "||",
@@ -149,4 +150,5 @@ pub const KEYWORDS: &[&str] = &[
     "true",
     "false",
     "json",
+    "any",
 ];

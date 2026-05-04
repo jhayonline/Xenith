@@ -1,11 +1,11 @@
 # This should fail - int to string
-spawn x: string = 42
+let x: string = 42
 echo(x)
 
 # This should work
-spawn y: int = 42
+let y: int = 42
 echo(y)
 
 # This should fail - string to int
-spawn z: int = "hello"
+let z: int = "hello"
 echo(z)

@@ -1,0 +1,21 @@
+# Variable declaration
+let x: int = 42
+let name: string = "Alice"
+let pi: float = 3.14159
+let active: bool = true
+
+# Constants
+const let MAX_SIZE: int = 100
+const let APP_NAME: string = "Xenith"
+
+# Reassignment (no let keyword)
+x = 100
+name = "Bob"
+
+# In structs
+struct Person {
+    name: string,
+    age: int
+}
+
+let alice: Person = Person { name: "Alice", age: 25 }

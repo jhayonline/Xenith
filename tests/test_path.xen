@@ -4,27 +4,27 @@ echo("=== Path Module Test ===\n")
 
 # Test join
 echo("1. Join paths:")
-spawn joined: string = join(["/home", "user", "docs", "file.txt"])
+let joined: string = join(["/home", "user", "docs", "file.txt"])
 echo("   {joined}\n")
 
 # Test basename
 echo("2. Basename:")
-spawn base: string = basename("/home/user/file.txt")
+let base: string = basename("/home/user/file.txt")
 echo("   {base}\n")
 
 # Test dirname
 echo("3. Dirname:")
-spawn dir: string = dirname("/home/user/file.txt")
+let dir: string = dirname("/home/user/file.txt")
 echo("   {dir}\n")
 
 # Test extension
 echo("4. Extension:")
-spawn ext: string = extension("archive.tar.gz")
+let ext: string = extension("archive.tar.gz")
 echo("   {ext}\n")
 
 # Test stem
 echo("5. Stem (name without extension):")
-spawn name: string = stem("document.pdf")
+let name: string = stem("document.pdf")
 echo("   {name}\n")
 
 # Test is_absolute
@@ -40,7 +40,7 @@ echo("   relative/path: {is_relative("relative/path")}\n")
 # Test absolute (may fail if file doesn't exist, but should work for existing paths)
 echo("8. Absolute path (for current directory .):")
 try {
-    spawn abs: string = absolute(".")
+    let abs: string = absolute(".")
     echo("   {abs}")
 } catch err {
     echo("   Error: {err}")
@@ -49,12 +49,12 @@ echo("")
 
 # Test normalize
 echo("9. Normalize path:")
-spawn norm: string = normalize("/home/./user/../user/docs/./file.txt")
+let norm: string = normalize("/home/./user/../user/docs/./file.txt")
 echo("   {norm}\n")
 
 # Test components
 echo("10. Path components:")
-spawn comps: list<string> = components("/home/user/docs/file.txt")
+let comps: list<string> = components("/home/user/docs/file.txt")
 for i = 0 to comps.len() {
     echo("   {comps[i]}")
 }
@@ -62,7 +62,7 @@ echo("")
 
 # Test parent
 echo("11. Parent directory:")
-spawn parent_dir: string = parent("/home/user/docs/file.txt")
+let parent_dir: string = parent("/home/user/docs/file.txt")
 echo("   {parent_dir}\n")
 
 echo("=== All tests completed! ===")

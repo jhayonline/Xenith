@@ -1,9 +1,14 @@
 # Standard Library: JSON Processing
 # Provides JSON parsing and serialization
 
-# Parses a JSON string into a json type
+# Parses a JSON string into a json type (which can hold any mixed types)
 export method parse(json_string: string) -> json {
     release __json_parse(json_string)
+}
+
+# Converts a map to a json type (supports mixed types via any)
+export method from_map(data: map<string, any>) -> json {
+    release __json_from_map(data)
 }
 
 # Converts a json value to a JSON string

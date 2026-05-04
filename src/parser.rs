@@ -1,3 +1,4 @@
+// parser.rs
 //! # Syntax Parser Module
 //!
 //! Implements recursive descent parsing to transform token streams
@@ -17,6 +18,7 @@ pub struct Parser {
     pub tokens: Vec<Token>,
     pub token_index: usize,
     pub struct_registry: HashMap<String, StructInfo>,
+    pub type_aliases: HashMap<String, Type>,
 }
 
 impl Parser {
@@ -26,6 +28,7 @@ impl Parser {
             tokens,
             token_index: 0,
             struct_registry: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -346,6 +349,7 @@ impl Parser {
                     }
                 }
             }
+            TokenType::TypeAny => Type::Any,
             TokenType::Identifier => {
                 // Could be a struct name or type alias
                 let name = type_token.value.clone().unwrap();
@@ -356,6 +360,11 @@ impl Parser {
                     if tok.kind == TokenType::Lt {
                         return self.parse_generic_type(name);
                     }
+                }
+
+                // First, check if this is a registered type alias
+                if let Some(alias_type) = self.type_aliases.get(&name) {
+                    return result.success_type(alias_type.clone());
                 }
 
                 Type::Struct(name, Vec::new()) // Placeholder, will resolve later
@@ -777,6 +786,7 @@ impl Parser {
                 );
             }
         };
+        let alias_name = name.value.as_ref().unwrap().clone();
         self.advance();
 
         // Expect '='
@@ -808,6 +818,10 @@ impl Parser {
             return result;
         }
 
+        // Register the alias in the parser's registry
+        self.type_aliases
+            .insert(alias_name.clone(), alias_type.clone());
+
         let pos_end = self
             .current_token()
             .map(|t| t.position_end.clone())
@@ -815,7 +829,7 @@ impl Parser {
 
         result.success(Node::TypeAlias(Box::new(TypeAliasNode {
             name,
-            alias_type,
+            alias_type: Type::Alias(alias_name.clone(), Box::new(alias_type)),
             position_start: pos_start,
             position_end: pos_end,
         })))
@@ -969,16 +983,21 @@ impl Parser {
         // If not a field assignment, reset and continue
         self.token_index = start_index;
 
-        // Check for const spawn declaration
+        // Check for const let declaration
         if let Some(tok) = self.current_token() {
             if tok.matches(TokenType::Keyword, Some("const")) {
-                return self.var_declaration();
+                // Peek to see if next is 'let'
+                if let Some(next) = self.peek_token() {
+                    if next.matches(TokenType::Keyword, Some("let")) {
+                        return self.var_declaration();
+                    }
+                }
             }
         }
 
-        // Check for variable declaration with 'spawn'
+        // Check for variable declaration with 'let'
         if let Some(tok) = self.current_token() {
-            if tok.matches(TokenType::Keyword, Some("spawn")) {
+            if tok.matches(TokenType::Keyword, Some("let")) {
                 return self.var_declaration();
             }
         }
@@ -1663,7 +1682,7 @@ impl Parser {
         })))
     }
 
-    // Variable declaration with 'spawn' keyword
+    // Variable declaration with 'let' keyword
     fn var_declaration(&mut self) -> ParseResult {
         let mut result = ParseResult::new();
         let mut is_constant = false;
@@ -1677,20 +1696,16 @@ impl Parser {
         }
 
         let pos_start = match self.current_token() {
-            Some(t) if t.matches(TokenType::Keyword, Some("spawn")) => t.position_start.clone(),
+            Some(t) if t.matches(TokenType::Keyword, Some("let")) => t.position_start.clone(),
             _ => {
                 return result.failure(
-                    InvalidSyntaxError::new(
-                        Self::dummy_pos(),
-                        Self::dummy_pos(),
-                        "Expected 'spawn'",
-                    )
-                    .base,
+                    InvalidSyntaxError::new(Self::dummy_pos(), Self::dummy_pos(), "Expected 'let'")
+                        .base,
                 );
             }
         };
 
-        self.advance(); // consume 'spawn'
+        self.advance(); // consume 'let'
 
         let var_name = match self.current_token() {
             Some(t) if t.kind == TokenType::Identifier => t.clone(),
@@ -1723,9 +1738,22 @@ impl Parser {
                 if result.error.is_some() {
                     return result;
                 }
-                Some(typ)
+                Some(typ) // ← IMPORTANT: Return Some(typ) here
             }
-            _ => {
+            Some(t) => {
+                // Debug: print what token we actually got
+                eprintln!(
+                    "DEBUG: Expected ':', got {:?} with value {:?}",
+                    t.kind, t.value
+                );
+                return result.failure(Error::unexpected_token(
+                    &format!("{:?}", t.kind),
+                    "':'",
+                    t.position_start.clone(),
+                    t.position_end.clone(),
+                ));
+            }
+            None => {
                 return result.failure(Error::unexpected_token(
                     "end of input",
                     "':'",

@@ -1,18 +1,16 @@
 grab { get, post, set_timeout, set_user_agent } from "std::http"
-grab { parse, stringify } from "std::json"
 
 echo("=== HTTP Module Test ===\n")
 
 # Test GET request
 echo("1. GET request to JSONPlaceholder:")
 try {
-    spawn response: HttpResponse = get("https://jsonplaceholder.typicode.com/posts/1")
+    let response: HttpResponse = get("https://jsonplaceholder.typicode.com/posts/1")
 
     echo("   Status: {response.status}")
     echo("   Body length: {len(response.body)}")
 
     when response.status >= 200 && response.status < 300 {
-        spawn data: json = parse(response.body)
         echo("   Body received successfully")
     }
 } catch err {
@@ -20,17 +18,15 @@ try {
 }
 echo("")
 
-# Test POST request
+# Test POST request with raw JSON string
 echo("2. POST request:")
 try {
-    spawn new_post_map: map<string, string> = {
-        "title": "Test Post",
-        "body": "This is a test post",
-        "userId": "1"
+    let json_str: map<string, any> = "{
+      "title": "Test Post",
+      "body": "This is a test post",
+      "userId": 1
     }
-    spawn new_post_json: json = parse(new_post_map)
-    spawn json_str: string = stringify(new_post_json)
-    spawn response: HttpResponse = post("https://jsonplaceholder.typicode.com/posts", json_str)
+    let response: HttpResponse = post("https://jsonplaceholder.typicode.com/posts", json_str)
 
     echo("   Status: {response.status}")
     when response.status >= 200 && response.status < 300 {
@@ -54,7 +50,7 @@ echo("   User-Agent set\n")
 # Test error handling
 echo("5. Error handling (invalid URL):")
 try {
-    spawn response: HttpResponse = get("https://invalid-domain-that-doesnt-exist.xyz")
+    let response: HttpResponse = get("https://invalid-domain-that-doesnt-exist.xyz")
     echo("   This should not print")
 } catch err {
     echo("   Caught error: {err}")

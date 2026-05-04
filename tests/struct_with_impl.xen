@@ -21,7 +21,7 @@ impl Person {
 }
 
 # Create a person
-spawn alice: Person = Person {
+let alice: Person = Person {
     name: "Alice",
     age: 25
 }
@@ -35,7 +35,7 @@ Person::birthday(alice)
 echo("After birthday: {alice.age}")
 
 # Test with a minor
-spawn bob: Person = Person {
+let bob: Person = Person {
     name: "Bob",
     age: 16
 }

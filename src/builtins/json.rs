@@ -1,3 +1,4 @@
+//json.rs
 //! JSON built-in functions
 //! These are called by the std::json wrapper module
 
@@ -30,10 +31,39 @@ fn json_to_xenith(json_val: SerdeValue) -> Value {
         SerdeValue::Object(obj) => {
             let mut map = Map::new();
             for (k, v) in obj {
+                // For JSON objects, we need to allow mixed types
+                // The map will contain values of different types (string, number, bool, etc.)
                 map.set(k, json_to_xenith(v));
             }
             Value::Map(map)
         }
+    }
+}
+
+pub fn from_map(args: Vec<Value>) -> RuntimeResult {
+    if args.len() != 1 {
+        return RuntimeResult::new().failure(
+            Error::new(
+                dummy_pos(),
+                dummy_pos(),
+                "Argument Error",
+                "__json_from_map expects 1 argument (map)",
+            )
+            .with_code("XEN100"),
+        );
+    }
+
+    match &args[0] {
+        Value::Map(m) => {
+            let json_val = xenith_to_json(&Value::Map(m.clone()));
+            RuntimeResult::new().success(Value::Json(JsonValue::new(json_val)))
+        }
+        _ => RuntimeResult::new().failure(Error::type_mismatch(
+            "map",
+            "other",
+            dummy_pos(),
+            dummy_pos(),
+        )),
     }
 }
 
@@ -112,22 +142,13 @@ pub fn stringify(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
+    // Accept either Json or convert from Map/other types
     let json_val = match &args[0] {
-        Value::Json(j) => &j.value,
-        _ => {
-            return RuntimeResult::new().failure(
-                RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
-                    "__json_stringify: argument must be json",
-                    None,
-                )
-                .base,
-            );
-        }
+        Value::Json(j) => j.value.clone(),
+        other => xenith_to_json(other), // fall through to xenith_to_json like stringify_pretty does
     };
 
-    match serde_json::to_string(json_val) {
+    match serde_json::to_string(&json_val) {
         Ok(s) => RuntimeResult::new().success(Value::String(XenithString::new(s))),
         Err(e) => RuntimeResult::new().failure(
             RuntimeError::new(

@@ -1,0 +1,3 @@
+type MyInt = int
+let x: MyInt = 42
+echo(x)

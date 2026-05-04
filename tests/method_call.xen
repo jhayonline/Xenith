@@ -1,8 +1,8 @@
 # Test method calls inside functions
 
 method test_range(n: int) -> list<int> {
-    spawn result: list<int> = []
-    spawn i: int = 0
+    let result: list<int> = []
+    let i: int = 0
     
     while i < n {
         result.append(i)
@@ -12,5 +12,5 @@ method test_range(n: int) -> list<int> {
     release result
 }
 
-spawn numbers: list<int> = test_range(5)
+let numbers: list<int> = test_range(5)
 echo("Numbers: {ret(numbers)}")

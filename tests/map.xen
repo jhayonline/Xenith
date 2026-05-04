@@ -1,5 +1,5 @@
 # Test maps with types
-spawn user: map<string, int> = {
+let user: map<string, int> = {
     "name": "Alice",
     "age": 25,
     "city": "New York"

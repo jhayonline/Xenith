@@ -9,13 +9,13 @@ write("test.txt", "Hello from Xenith!")
 echo("File exists? {exists("test.txt")}")
 
 # Test read
-spawn content: string = read("test.txt")
+let content: string = read("test.txt")
 echo("File content: {content}")
 
 # Test append
 echo("\nAppending to test.txt...")
 append("test.txt", "\nAppended line!")
-spawn new_content: string = read("test.txt")
+let new_content: string = read("test.txt")
 echo("New content: {new_content}")
 
 # Test is_file
@@ -28,7 +28,7 @@ echo("Is test_dir a directory? {is_dir("test_dir")}")
 
 # Test list_dir
 echo("\nListing current directory:")
-spawn items: list<string> = list_dir(".")
+let items: list<string> = list_dir(".")
 for item in items {
     echo("  {item}")
 }
@@ -36,7 +36,7 @@ for item in items {
 # Test reading non-existent file (should error)
 echo("\nTrying to read non-existent file...")
 try {
-    spawn missing: string = read("nonexistent.txt")
+    let missing: string = read("nonexistent.txt")
     echo("This won't print")
 } catch err {
     echo("Caught error: {err}")

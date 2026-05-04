@@ -1,5 +1,5 @@
 # Test variable scoping with types
-spawn x: int = 10
+let x: int = 10
 echo("Outer x: {x}")
 
 method test() -> null {
@@ -13,7 +13,7 @@ test()
 echo("Outer x after function call: {x}")
 
 # Test nested blocks
-spawn y: int = 5
+let y: int = 5
 when y == 5 {
     echo("Inside block - y before: {y}")
     y = 15

@@ -17,28 +17,28 @@ echo("   String concatenation: Hello World")
 echo("")
 
 #######################################
-# 2. VARIABLES (spawn)
+# 2. VARIABLES (let)
 #######################################
 
 echo("2. VARIABLES:")
 
-spawn age: int = 25
-spawn name: string = "Alice"
-spawn pi: float = 3.14159
-spawn is_active: bool = true
+let age: int = 25
+let name: string = "Alice"
+let pi: float = 3.14159
+let is_active: bool = true
 
 echo("   age = {age}")
 echo("   name = {name}")
 echo("   pi = {pi}")
 echo("   is_active = {is_active}")
 
-# Variable reassignment (no spawn keyword needed!)
+# Variable reassignment (no let keyword needed!)
 age = 26
 echo("   age (updated) = {age}")
 echo("")
 
-# Test const spawn
-const spawn MAX_SIZE: int = 100
+# Test const let
+const let MAX_SIZE: int = 100
 echo("   MAX_SIZE = {MAX_SIZE}")
 echo("")
 
@@ -48,8 +48,8 @@ echo("")
 
 echo("3. ARITHMETIC:")
 
-spawn a: int = 10
-spawn b: int = 3
+let a: int = 10
+let b: int = 3
 
 echo("   a = {a}, b = {b}")
 echo("   a + b = {a + b}")
@@ -66,9 +66,9 @@ echo("")
 
 echo("4. COMPARISONS:")
 
-spawn x: int = 5
-spawn y: int = 10
-spawn z: int = 5
+let x: int = 5
+let y: int = 10
+let z: int = 5
 
 echo("   x = {x}, y = {y}, z = {z}")
 echo("   x == z -> {x == z}")
@@ -85,8 +85,8 @@ echo("")
 
 echo("5. LOGICAL OPERATORS:")
 
-spawn t: bool = true
-spawn f: bool = false
+let t: bool = true
+let f: bool = false
 
 echo("   TRUE = {t}, FALSE = {f}")
 echo("   t && t -> {t && t}")
@@ -103,7 +103,7 @@ echo("")
 
 echo("6. CONTROL FLOW:")
 
-spawn score: int = 85
+let score: int = 85
 
 when score >= 90 {
     echo("   Grade: A")
@@ -115,8 +115,8 @@ when score >= 90 {
     echo("   Grade: F")
 }
 
-spawn outer: int = 10
-spawn inner: int = 20
+let outer: int = 10
+let inner: int = 20
 
 when outer > 5 {
     when inner > 15 {
@@ -131,12 +131,12 @@ echo("")
 
 echo("7. TERNARY OPERATOR:")
 
-spawn age2: int = 18
-spawn status: string = age2 >= 18 ? "Adult" : "Minor"
+let age2: int = 18
+let status: string = age2 >= 18 ? "Adult" : "Minor"
 echo("   age {age2} -> {status}")
 
-spawn age3: int = 16
-spawn status2: string = age3 >= 18 ? "Adult" : "Minor"
+let age3: int = 16
+let status2: string = age3 >= 18 ? "Adult" : "Minor"
 echo("   age {age3} -> {status2}")
 echo("")
 
@@ -146,7 +146,7 @@ echo("")
 
 echo("8. LISTS (Modern Syntax):")
 
-spawn fruits: list<string> = ["apple", "banana", "orange"]
+let fruits: list<string> = ["apple", "banana", "orange"]
 echo("   Original list: {ret(fruits)}")
 
 # Modern indexing with []
@@ -158,20 +158,20 @@ echo("   fruits[2] = {fruits[2]}")
 fruits.append("grape")
 echo("   After append: {ret(fruits)}")
 
-spawn popped: string = fruits.pop(1)
+let popped: string = fruits.pop(1)
 echo("   Popped index 1: {popped}")
 echo("   List after pop: {ret(fruits)}")
 
 echo("   List length: {fruits.len()}")
 
 # List concatenation (returns new list)
-spawn list1: list<int> = [1, 2, 3]
-spawn list2: list<int> = [4, 5, 6]
-spawn combined: list<int> = list1 + list2
+let list1: list<int> = [1, 2, 3]
+let list2: list<int> = [4, 5, 6]
+let combined: list<int> = list1 + list2
 echo("   Concatenated: {ret(combined)}")
 
 # Nested list indexing
-spawn matrix: list<list<int>> = [[1, 2], [3, 4], [5, 6]]
+let matrix: list<list<int>> = [[1, 2], [3, 4], [5, 6]]
 echo("   matrix[1][0] = {matrix[1][0]}")
 echo("")
 
@@ -197,7 +197,7 @@ for i = 5 to 0 step -1 {
 }
 
 echo("   WHILE loop countdown:")
-spawn count: int = 3
+let count: int = 3
 while count > 0 {
     echo("     countdown: {count}")
     count = count - 1
@@ -251,8 +251,8 @@ method factorial(n: int) -> int {
 echo("   factorial(5) = {factorial(5)}")
 
 method range(n: int) -> list<int> {
-    spawn result: list<int> = []
-    spawn i: int = 0
+    let result: list<int> = []
+    let i: int = 0
     while i < n {
         result.append(i)
         i = i + 1
@@ -262,9 +262,9 @@ method range(n: int) -> list<int> {
 
 echo("   range(5) = {ret(range(5))}")
 
-type IntFunction = method(int) -> int
-spawn my_double: IntFunction = double
-echo("   my_double(10) = {my_double(10)}")
+# type IntFunction = method(int) -> int
+# let my_double: IntFunction = double
+# echo("   my_double(10) = {my_double(10)}")
 
 # Test void function
 method log_message(msg: string) -> null {
@@ -282,8 +282,8 @@ echo("")
 echo("11. MAPS:")
 
 # Test maps with types - use double quotes for keys
-spawn user: map<string, int> = {"age": 25}
-spawn scores: map<string, list<int>> = {"Alice": [100, 95, 90]}
+let user: map<string, int> = {"age": 25}
+let scores: map<string, list<int>> = {"Alice": [100, 95, 90]}
 
 echo("   User age: {user["age"]}")
 echo("   Alice's scores: {ret(scores["Alice"])}")
@@ -322,11 +322,11 @@ method fibonacci(n: int) -> int {
     when n <= 1 {
         release n
     }
-    spawn a: int = 0
-    spawn b: int = 1
-    spawn i: int = 2
+    let a: int = 0
+    let b: int = 1
+    let i: int = 2
     while i <= n {
-        spawn c: int = a + b
+        let c: int = a + b
         a = b
         b = c
         i = i + 1
@@ -352,10 +352,10 @@ struct Student {
     score: int
 }
 
-spawn alice: Student = Student { name: "Alice", score: 85 }
-spawn bob: Student = Student { name: "Bob", score: 62 }
-spawn charlie: Student = Student { name: "Charlie", score: 95 }
-spawn diana: Student = Student { name: "Diana", score: 78 }
+let alice: Student = Student { name: "Alice", score: 85 }
+let bob: Student = Student { name: "Bob", score: 62 }
+let charlie: Student = Student { name: "Charlie", score: 95 }
+let diana: Student = Student { name: "Diana", score: 78 }
 
 echo("   Alice: {alice.name} = {alice.score}")
 echo("   Bob: {bob.name} = {bob.score}")
@@ -373,18 +373,18 @@ echo("")
 
 echo("15. DATA PROCESSING:")
 
-spawn students: list<Student> = [alice, bob, charlie, diana]
+let students: list<Student> = [alice, bob, charlie, diana]
 
 method process_grades(student_list: list<Student>) -> list<string> {
-    spawn results: list<string> = []
-    spawn i: int = 0
+    let results: list<string> = []
+    let i: int = 0
 
     while i < student_list.len() {
-        spawn student: Student = student_list[i]
-        spawn name: string = student.name
-        spawn score: int = student.score
+        let student: Student = student_list[i]
+        let name: string = student.name
+        let score: int = student.score
 
-        spawn grade: string = "F"
+        let grade: string = "F"
         when score >= 90 {
             grade = "A"
         } or when score >= 80 {
@@ -401,9 +401,9 @@ method process_grades(student_list: list<Student>) -> list<string> {
     release results
 }
 
-spawn grades: list<string> = process_grades(students)
+let grades: list<string> = process_grades(students)
 
-spawn j: int = 0
+let j: int = 0
 while j < grades.len() {
     echo("   {grades[j]}")
     j = j + 1
@@ -411,31 +411,31 @@ while j < grades.len() {
 echo("")
 
 #######################################
-# 17. TYPE CONVERSION
+# 16. TYPE CONVERSION
 #######################################
 
-echo("17. TYPE CONVERSION:")
+echo("16. TYPE CONVERSION:")
 
-spawn int_val: int = 42
-spawn float_val: float = int_val as float
-spawn string_val: string = int_val as string
-spawn bool_val: bool = int_val as bool
+let int_val: int = 42
+let float_val: float = int_val as float
+let string_val: string = int_val as string
+let bool_val: bool = int_val as bool
 
 echo("   int 42 -> float: {float_val}")
 echo("   int 42 -> string: {string_val}")
 echo("   int 42 -> bool: {bool_val}")
 
-spawn pi_val: float = 3.14159
-spawn pi_int: int = pi_val as int
+let pi_val: float = 3.14159
+let pi_int: int = pi_val as int
 echo("   float 3.14159 -> int: {pi_int}")
 
-spawn true_val: bool = true
-spawn true_int: int = true_val as int
+let true_val: bool = true
+let true_int: int = true_val as int
 echo("   bool true -> int: {true_int}")
 echo("")
 
 #######################################
-# 18. TEST SUMMARY
+# 17. TEST SUMMARY
 #######################################
 
 echo("")

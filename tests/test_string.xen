@@ -4,7 +4,7 @@ echo("=== String Module Test ===\n")
 
 # Test split
 echo("1. Split:")
-spawn parts: list<string> = split("a,b,c", ",")
+let parts: list<string> = split("a,b,c", ",")
 for i = 0 to parts.len() {
     echo("   {parts[i]}")
 }
@@ -12,8 +12,8 @@ echo("")
 
 # Test join
 echo("2. Join:")
-spawn fruits: list<string> = ["apple", "banana", "orange"]
-spawn joined: string = join(fruits, ", ")
+let fruits: list<string> = ["apple", "banana", "orange"]
+let joined: string = join(fruits, ", ")
 echo("   {joined}\n")
 
 # Test trim
@@ -24,7 +24,7 @@ echo("   '", trim_end("  hello  "), "'\n")
 
 # Test replace
 echo("4. Replace:")
-spawn replaced: string = replace("hello world", "world", "xenith")
+let replaced: string = replace("hello world", "world", "xenith")
 echo("   {replaced}\n")
 
 # Test contains
@@ -59,11 +59,11 @@ echo("   'hello' is palindrome? {is_palindrome("hello")}\n")
 
 # Test CSV parsing
 echo("10. CSV parsing:")
-spawn csv_line: string = "name,age,city"
-spawn columns: list<string> = split(csv_line, ",")
+let csv_line: string = "name,age,city"
+let columns: list<string> = split(csv_line, ",")
 echo("   Columns: " + join(columns, " | "))
-spawn data_line: string = "Alice,25,New York"
-spawn values: list<string> = split(data_line, ",")
+let data_line: string = "Alice,25,New York"
+let values: list<string> = split(data_line, ",")
 for i = 0 to values.len() {
     echo("   " + columns[i] + ": " + values[i])
 }

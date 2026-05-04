@@ -1,16 +1,41 @@
-spawn int_val: int = 42;
-spawn float_val: float = int_val as float;
-spawn string_val: string = int_val as string;
-spawn bool_val: bool = int_val as bool;
+echo("=== Type Conversion Test ===\n")
 
-echo("   int 42 -> float: {float_val}");
-echo("   int 42 -> string: {string_val}");
-echo("   int 42 -> bool: {bool_val}");
+# int to float
+let int_val: int = 42
+let float_val: float = int_val as float
+echo("int 42 -> float: {float_val}")
 
-spawn pi_val: float = 3.14159;
-spawn pi_int: int = pi_val as int;
-echo("   float 3.14159 -> int: {pi_int}");
+# int to string
+let string_val: string = int_val as string
+echo("int 42 -> string: {string_val}")
 
-spawn true_val: bool = true;
-spawn true_int: int = true_val as int;
-echo("   bool true -> int: {true_int}");
+# int to bool
+let bool_val: bool = int_val as bool
+echo("int 42 -> bool: {bool_val}")
+
+# float to int
+let pi_val: float = 3.14159
+let pi_int: int = pi_val as int
+echo("float 3.14159 -> int: {pi_int}")
+
+# bool to int
+let true_val: bool = true
+let true_int: int = true_val as int
+echo("bool true -> int: {true_int}")
+
+# string to int
+let str_int: string = "123"
+let parsed_int: int = str_int as int
+echo("string 123 -> int: {parsed_int}")
+
+# string to float
+let str_float: string = "3.14"
+let parsed_float: float = str_float as float
+echo("string 3.14 -> float: {parsed_float}")
+
+# string to bool
+let str_true: string = "true"
+let parsed_bool: bool = str_true as bool
+echo("string true -> bool: {parsed_bool}")
+
+echo("\n=== All conversion tests completed! ===")

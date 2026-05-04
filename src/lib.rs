@@ -80,6 +80,10 @@ pub fn run(filename: &str, source: &str) -> Result<Value, Error> {
 
     // Interpretation
     let mut interpreter = Interpreter::new();
+
+    // transfer type aliases from parser to interpreter
+    interpreter.type_aliases = parser.type_aliases;
+
     let mut context = crate::context::Context::new("<program>", None, None);
     context.symbol_table = Rc::new(interpreter.global_symbol_table.clone());
 

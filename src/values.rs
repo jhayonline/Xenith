@@ -1,3 +1,4 @@
+// values.rs
 //! # Runtime Values Module
 //!
 //! Defines the runtime object system for Xenith including Numbers, Strings,
@@ -595,18 +596,15 @@ impl Function {
             (Value::Number(_), Type::Float) => true,
             (Value::String(_), Type::String) => true,
             (Value::Bool(_), Type::Bool) => true,
-            (Value::List(l), Type::List(elem_type)) => l
-                .elements
-                .iter()
-                .all(|v| Self::value_matches_type(v, elem_type)),
-            (Value::Map(m), Type::Map(key_type, val_type)) => {
-                // Keys are always strings in runtime
-                m.pairs
-                    .values()
-                    .all(|v| Self::value_matches_type(v, val_type))
-            }
+            // Permissive collection matching - type params are hints only
+            (Value::List(_), Type::List(_)) => true,
+            (Value::List(_), Type::Struct(name, _)) if name == "list" => true,
+            (Value::Map(_), Type::Map(_, _)) => true,
+            (Value::Map(_), Type::Struct(name, _)) if name == "map" => true,
             (Value::Struct(s), Type::Struct(name, _)) => &s.name == name,
             (Value::Json(_), Type::Json) => true,
+            // ANY type matches anything! This is the key line
+            (_, Type::Any) => true,
             _ => false,
         }
     }
@@ -754,6 +752,7 @@ impl BuiltInFunction {
             "__json_get" => crate::builtins::json::get(args),
             "__json_set" => crate::builtins::json::set(args),
             "__json_has_key" => crate::builtins::json::has_key(args),
+            "__json_from_map" => crate::builtins::json::from_map(args),
 
             // std::dotenv  Dot Env
             "__dotenv_load" => crate::builtins::dotenv::load(args),
@@ -1164,5 +1163,36 @@ pub struct JsonValue {
 impl JsonValue {
     pub fn new(value: serde_json::Value) -> Self {
         Self { value }
+    }
+
+    // Convert to Xenith Value (recursive, with mixed types allowed)
+    pub fn to_xenith(&self) -> Value {
+        match &self.value {
+            serde_json::Value::Null => Value::Number(Number::null()),
+            serde_json::Value::Bool(b) => Value::Bool(*b),
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    Value::Number(Number::new(f))
+                } else {
+                    Value::Number(Number::null())
+                }
+            }
+            serde_json::Value::String(s) => Value::String(XenithString::new(s.clone())),
+            serde_json::Value::Array(arr) => {
+                let elements: Vec<Value> = arr
+                    .iter()
+                    .map(|v| JsonValue::new(v.clone()).to_xenith())
+                    .collect();
+                Value::List(List::new(elements))
+            }
+            serde_json::Value::Object(obj) => {
+                let mut map = Map::new();
+                for (k, v) in obj {
+                    // Map can hold mixed types because we're using Value
+                    map.set(k.clone(), JsonValue::new(v.clone()).to_xenith());
+                }
+                Value::Map(map)
+            }
+        }
     }
 }

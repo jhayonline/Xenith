@@ -3,6 +3,8 @@
 //! Defines the type system for Xenith including primitive types,
 //! collections, and user-defined types.
 
+use std::collections::HashMap;
+
 /// Represents all possible types in Xenith
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -28,8 +30,10 @@ pub enum Type {
     Alias(String, Box<Type>),
     /// Unknown/not yet resolved (for parsing)
     Unknown,
-
+    /// JSON type
     Json,
+    /// Any type (can hold any value)
+    Any,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,7 +46,7 @@ pub struct FunctionType {
 pub struct StructField {
     pub name: String,
     pub field_type: Type,
-    pub is_constant: bool, // const spawn vs spawn
+    pub is_constant: bool, // const let vs let
 }
 
 impl Type {
@@ -57,6 +61,7 @@ impl Type {
             Type::List(_) => "[]".to_string(),
             Type::Map(_, _) => "{}".to_string(),
             Type::Json => "null".to_string(),
+            Type::Any => "null".to_string(),
             _ => "null".to_string(),
         }
     }
@@ -82,6 +87,7 @@ impl Type {
             "string" => Type::String,
             "bool" => Type::Bool,
             "null" => Type::Null,
+            "any" => Type::Any,
             _ => Type::Unknown,
         }
     }
@@ -109,6 +115,30 @@ impl Type {
             Type::Alias(name, _) => name.clone(),
             Type::Unknown => "unknown".to_string(),
             Type::Json => "json".to_string(),
+            Type::Any => "any".to_string(),
+        }
+    }
+
+    /// Resolve type aliases to their underlying type
+    pub fn resolve(&self, aliases: &HashMap<String, Type>) -> Type {
+        match self {
+            Type::Alias(name, inner) => {
+                if let Some(resolved) = aliases.get(name) {
+                    resolved.resolve(aliases)
+                } else {
+                    inner.resolve(aliases)
+                }
+            }
+            Type::List(inner) => Type::List(Box::new(inner.resolve(aliases))),
+            Type::Map(k, v) => {
+                Type::Map(Box::new(k.resolve(aliases)), Box::new(v.resolve(aliases)))
+            }
+            Type::Function(f) => Type::Function(FunctionType {
+                param_types: f.param_types.iter().map(|t| t.resolve(aliases)).collect(),
+                return_type: Box::new(f.return_type.resolve(aliases)),
+            }),
+            Type::Struct(name, fields) => Type::Struct(name.clone(), fields.clone()),
+            _ => self.clone(),
         }
     }
 }

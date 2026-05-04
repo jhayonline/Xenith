@@ -1,3 +1,4 @@
+//interpreter.rs
 //! # Interpreter Module
 //!
 //! Traverses the Abstract Syntax Tree and executes the program.
@@ -16,7 +17,7 @@ use crate::parser::Parser;
 use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
 use crate::symbol_table::SymbolTable;
-use crate::types::Type;
+use crate::types::{FunctionType, Type};
 use crate::utils::{value_to_interpolated_string, value_to_string};
 use crate::values::{
     BuiltInFunction, CaughtError, Function, List, Map, Number, Value, XenithString,
@@ -51,6 +52,7 @@ pub struct Interpreter {
     /// Module registry for caching loaded modules
     pub module_registry: Option<ModuleRegistry>,
     pub struct_registry: HashMap<String, StructMethodInfo>,
+    pub type_aliases: HashMap<String, Type>,
 }
 
 impl Interpreter {
@@ -451,6 +453,10 @@ impl Interpreter {
             "__json_has_key".to_string(),
             Value::BuiltInFunction(BuiltInFunction::new("__json_has_key")),
         );
+        global.set(
+            "__json_from_map".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("__json_from_map")),
+        );
 
         // std::dotenv  Dot Env
         global.set(
@@ -520,6 +526,7 @@ impl Interpreter {
             global_symbol_table: global,
             module_registry: None,
             struct_registry: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -647,6 +654,11 @@ impl Interpreter {
     }
 
     fn visit_type_alias(&mut self, node: &TypeAliasNode, context: &mut Context) -> RuntimeResult {
+        let alias_name = node.name.value.as_ref().unwrap().clone();
+        let alias_type = node.alias_type.clone();
+
+        self.type_aliases.insert(alias_name, alias_type);
+
         RuntimeResult::new().success(Value::Number(Number::null()))
     }
 
@@ -900,7 +912,7 @@ impl Interpreter {
         // Check if this is a new variable declaration (has type annotation)
         if let Some(var_type) = &node.var_type {
             // Check if the value type matches the declared type
-            if !Self::value_matches_type(&value, var_type) {
+            if !Self::value_matches_type(&value, var_type, &self.type_aliases) {
                 return RuntimeResult::new().failure(Error::type_mismatch(
                     &var_type.to_string(),
                     &Self::get_type_name(&value),
@@ -923,28 +935,62 @@ impl Interpreter {
     }
 
     /// Check if a value matches an expected type
-    fn value_matches_type(value: &Value, expected_type: &Type) -> bool {
-        match (value, expected_type) {
+    fn value_matches_type(
+        value: &Value,
+        expected_type: &Type,
+        aliases: &HashMap<String, Type>,
+    ) -> bool {
+        // Resolve type aliases first
+        let resolved = Self::resolve_type(expected_type, aliases);
+
+        match (value, &resolved) {
             (Value::Number(n), Type::Int) => n.value.fract() == 0.0,
             (Value::Number(_), Type::Float) => true,
             (Value::String(_), Type::String) => true,
             (Value::Bool(_), Type::Bool) => true,
-            (Value::List(l), Type::List(elem_type)) => l
-                .elements
-                .iter()
-                .all(|v| Self::value_matches_type(v, elem_type)),
-            (Value::Map(m), Type::Map(key_type, val_type)) => {
-                // Keys are always strings in runtime
-                m.pairs
-                    .values()
-                    .all(|v| Self::value_matches_type(v, val_type))
-            }
+            (Value::List(_), Type::List(_)) => true,
+            (Value::List(_), Type::Struct(name, _)) if name == "list" => true,
+            (Value::Map(_), Type::Map(_, _)) => true,
+            (Value::Map(_), Type::Struct(name, _)) if name == "map" => true,
             (Value::Struct(s), Type::Struct(name, _)) => &s.name == name,
             (Value::Json(_), Type::Json) => true,
+            (Value::Function(f), Type::Function(func_type)) => {
+                if f.arg_names.len() != func_type.param_types.len() {
+                    return false;
+                }
+                true
+            }
+            (_, Type::Any) => true,
             _ => false,
         }
     }
 
+    // Helper to resolve type aliases - updated to accept aliases parameter
+    fn resolve_type(typ: &Type, aliases: &HashMap<String, Type>) -> Type {
+        match typ {
+            Type::Alias(name, _) => {
+                if let Some(resolved) = aliases.get(name) {
+                    resolved.clone()
+                } else {
+                    typ.clone()
+                }
+            }
+            Type::List(inner) => Type::List(Box::new(Self::resolve_type(inner, aliases))),
+            Type::Map(k, v) => Type::Map(
+                Box::new(Self::resolve_type(k, aliases)),
+                Box::new(Self::resolve_type(v, aliases)),
+            ),
+            Type::Function(f) => Type::Function(FunctionType {
+                param_types: f
+                    .param_types
+                    .iter()
+                    .map(|t| Self::resolve_type(t, aliases))
+                    .collect(),
+                return_type: Box::new(Self::resolve_type(&f.return_type, aliases)),
+            }),
+            _ => typ.clone(),
+        }
+    }
     /// Get a string name for a value's type
     fn get_type_name(value: &Value) -> String {
         match value {
@@ -1260,11 +1306,11 @@ impl Interpreter {
             _ if op.matches(crate::tokens::TokenType::Keyword, Some("as")) => {
                 // Type conversion
                 match (&left, &right) {
-                    // int -> float
+                    // int/float -> float
                     (Value::Number(n), Value::String(s)) if s.value == "float" => {
                         Ok(Value::Number(Number::new(n.value)))
                     }
-                    // float -> int (truncates)
+                    // int/float -> int (truncates)
                     (Value::Number(n), Value::String(s)) if s.value == "int" => {
                         Ok(Value::Number(Number::new(n.value.trunc())))
                     }
@@ -1272,13 +1318,9 @@ impl Interpreter {
                     (Value::Number(n), Value::String(s)) if s.value == "string" => {
                         Ok(Value::String(XenithString::new(n.value.to_string())))
                     }
-                    // number -> bool (0 = false, non-zero = true)
+                    // number -> bool
                     (Value::Number(n), Value::String(s)) if s.value == "bool" => {
-                        Ok(Value::Number(Number::new(if n.value != 0.0 {
-                            1.0
-                        } else {
-                            0.0
-                        })))
+                        Ok(Value::Bool(n.value != 0.0))
                     }
                     // string -> int
                     (Value::String(s), Value::String(target)) if target.value == "int" => {
@@ -1309,36 +1351,33 @@ impl Interpreter {
                     // string -> bool
                     (Value::String(s), Value::String(target)) if target.value == "bool" => {
                         let lower = s.value.to_lowercase();
-                        let result = if lower == "true" || lower == "1" {
-                            1.0
+                        if lower == "true" || lower == "1" {
+                            Ok(Value::Bool(true))
                         } else if lower == "false" || lower == "0" {
-                            0.0
+                            Ok(Value::Bool(false))
                         } else {
-                            return RuntimeResult::new().failure(
-                                RuntimeError::new(
-                                    node.position_start.clone(),
-                                    node.position_end.clone(),
-                                    &format!("Cannot convert string '{}' to bool", s.value),
-                                    Some(context.clone()),
-                                )
-                                .base,
-                            );
-                        };
-                        Ok(Value::Number(Number::new(result)))
+                            Err(RuntimeError::new(
+                                node.position_start.clone(),
+                                node.position_end.clone(),
+                                &format!("Cannot convert string '{}' to bool", s.value),
+                                Some(context.clone()),
+                            )
+                            .base)
+                        }
                     }
                     // bool -> int
-                    (Value::Number(n), Value::String(target)) if target.value == "int" => {
-                        // bool is stored as Number (0 or 1)
-                        Ok(Value::Number(Number::new(n.value)))
-                    }
-                    // bool -> string
-                    (Value::Number(n), Value::String(target)) if target.value == "string" => {
-                        let s = if n.value != 0.0 { "true" } else { "false" };
-                        Ok(Value::String(XenithString::new(s.to_string())))
+                    (Value::Bool(b), Value::String(target)) if target.value == "int" => {
+                        Ok(Value::Number(Number::new(if *b { 1.0 } else { 0.0 })))
                     }
                     // bool -> float
-                    (Value::Number(n), Value::String(target)) if target.value == "float" => {
-                        Ok(Value::Number(Number::new(n.value)))
+                    (Value::Bool(b), Value::String(target)) if target.value == "float" => {
+                        Ok(Value::Number(Number::new(if *b { 1.0 } else { 0.0 })))
+                    }
+                    // bool -> string
+                    (Value::Bool(b), Value::String(target)) if target.value == "string" => {
+                        Ok(Value::String(XenithString::new(
+                            if *b { "true" } else { "false" }.to_string(),
+                        )))
                     }
                     _ => Err(RuntimeError::new(
                         node.position_start.clone(),
