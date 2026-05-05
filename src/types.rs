@@ -30,10 +30,8 @@ pub enum Type {
     Alias(String, Box<Type>),
     /// Unknown/not yet resolved (for parsing)
     Unknown,
-    /// JSON type
+    /// JSON type - can hold mixed types (null, bool, number, string, array, object)
     Json,
-    /// Any type (can hold any value)
-    Any,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +44,7 @@ pub struct FunctionType {
 pub struct StructField {
     pub name: String,
     pub field_type: Type,
-    pub is_constant: bool, // const let vs let
+    pub is_constant: bool,
 }
 
 impl Type {
@@ -61,7 +59,6 @@ impl Type {
             Type::List(_) => "[]".to_string(),
             Type::Map(_, _) => "{}".to_string(),
             Type::Json => "null".to_string(),
-            Type::Any => "null".to_string(),
             _ => "null".to_string(),
         }
     }
@@ -87,7 +84,7 @@ impl Type {
             "string" => Type::String,
             "bool" => Type::Bool,
             "null" => Type::Null,
-            "any" => Type::Any,
+            "json" => Type::Json,
             _ => Type::Unknown,
         }
     }
@@ -115,7 +112,6 @@ impl Type {
             Type::Alias(name, _) => name.clone(),
             Type::Unknown => "unknown".to_string(),
             Type::Json => "json".to_string(),
-            Type::Any => "any".to_string(),
         }
     }
 

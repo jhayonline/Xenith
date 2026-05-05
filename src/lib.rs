@@ -20,6 +20,7 @@ pub mod builtins;
 pub mod context;
 pub mod error;
 pub mod interpreter;
+pub mod json;
 pub mod lexer;
 pub mod modules;
 pub mod nodes;

@@ -349,7 +349,6 @@ impl Parser {
                     }
                 }
             }
-            TokenType::TypeAny => Type::Any,
             TokenType::Identifier => {
                 // Could be a struct name or type alias
                 let name = type_token.value.clone().unwrap();

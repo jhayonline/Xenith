@@ -12,6 +12,7 @@ use std::io::{self, Write};
 use crate::context::Context;
 use crate::error::{Error, RuntimeError};
 use crate::interpreter::Interpreter;
+use crate::json::Json;
 use crate::nodes::Node;
 use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
@@ -29,7 +30,7 @@ pub enum Value {
     Map(Map),
     Struct(Struct),
     Bool(bool),
-    Json(JsonValue),
+    Json(Json),
 }
 
 impl Value {
@@ -59,7 +60,7 @@ impl Value {
             Value::Function(_) => true,
             Value::BuiltInFunction(_) => true,
             Value::Bool(b) => *b,
-            Value::Json(j) => j.value != serde_json::Value::Null,
+            Value::Json(j) => !j.is_null(),
         }
     }
 
@@ -603,8 +604,6 @@ impl Function {
             (Value::Map(_), Type::Struct(name, _)) if name == "map" => true,
             (Value::Struct(s), Type::Struct(name, _)) => &s.name == name,
             (Value::Json(_), Type::Json) => true,
-            // ANY type matches anything! This is the key line
-            (_, Type::Any) => true,
             _ => false,
         }
     }
@@ -1151,48 +1150,5 @@ impl Struct {
 
     pub fn set_field(&mut self, name: String, value: Value) {
         self.fields.insert(name, value);
-    }
-}
-
-/// JSON value wrapper
-#[derive(Debug, Clone)]
-pub struct JsonValue {
-    pub value: serde_json::Value,
-}
-
-impl JsonValue {
-    pub fn new(value: serde_json::Value) -> Self {
-        Self { value }
-    }
-
-    // Convert to Xenith Value (recursive, with mixed types allowed)
-    pub fn to_xenith(&self) -> Value {
-        match &self.value {
-            serde_json::Value::Null => Value::Number(Number::null()),
-            serde_json::Value::Bool(b) => Value::Bool(*b),
-            serde_json::Value::Number(n) => {
-                if let Some(f) = n.as_f64() {
-                    Value::Number(Number::new(f))
-                } else {
-                    Value::Number(Number::null())
-                }
-            }
-            serde_json::Value::String(s) => Value::String(XenithString::new(s.clone())),
-            serde_json::Value::Array(arr) => {
-                let elements: Vec<Value> = arr
-                    .iter()
-                    .map(|v| JsonValue::new(v.clone()).to_xenith())
-                    .collect();
-                Value::List(List::new(elements))
-            }
-            serde_json::Value::Object(obj) => {
-                let mut map = Map::new();
-                for (k, v) in obj {
-                    // Map can hold mixed types because we're using Value
-                    map.set(k.clone(), JsonValue::new(v.clone()).to_xenith());
-                }
-                Value::Map(map)
-            }
-        }
     }
 }

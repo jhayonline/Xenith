@@ -960,7 +960,6 @@ impl Interpreter {
                 }
                 true
             }
-            (_, Type::Any) => true,
             _ => false,
         }
     }
