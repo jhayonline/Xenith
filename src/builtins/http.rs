@@ -21,10 +21,6 @@ static HTTP_CLIENT: Lazy<Mutex<Client>> = Lazy::new(|| {
 
 static USER_AGENT: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("Xenith/1.0".to_string()));
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
 fn create_response_struct(status: u16, body: String, headers: HashMap<String, String>) -> Value {
     let mut headers_map = Map::new();
     for (k, v) in headers {
@@ -73,12 +69,12 @@ fn get_body_string(args: &[Value], index: usize) -> Option<String> {
     }
 }
 
-pub fn get(args: Vec<Value>) -> RuntimeResult {
+pub fn get(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() < 1 || args.len() > 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_get expects 1-2 arguments (url, headers?)",
             )
@@ -92,8 +88,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -125,8 +121,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
                 }
                 Err(e) => RuntimeResult::new().failure(
                     Error::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "HTTP Error",
                         &format!("Failed to read response body: {}", e),
                     )
@@ -136,8 +132,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "HTTP Request Failed",
                 &format!("{}", e),
             )
@@ -148,12 +144,12 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn post(args: Vec<Value>) -> RuntimeResult {
+pub fn post(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() < 2 || args.len() > 3 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_post expects 2-3 arguments (url, body, headers?)",
             )
@@ -167,13 +163,12 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
 
-    // Debug: check what get_body_string returns
     let body_opt = get_body_string(&args, 1);
 
     let body = match body_opt {
@@ -182,8 +177,8 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string or json",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -215,8 +210,8 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
                 }
                 Err(e) => RuntimeResult::new().failure(
                     Error::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "HTTP Error",
                         &format!("Failed to read response body: {}", e),
                     )
@@ -226,8 +221,8 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "HTTP Request Failed",
                 &format!("{}", e),
             )
@@ -238,12 +233,12 @@ pub fn post(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn put(args: Vec<Value>) -> RuntimeResult {
+pub fn put(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() < 2 || args.len() > 3 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_put expects 2-3 arguments (url, body, headers?)",
             )
@@ -257,8 +252,8 @@ pub fn put(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -269,8 +264,8 @@ pub fn put(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string or json",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -302,8 +297,8 @@ pub fn put(args: Vec<Value>) -> RuntimeResult {
                 }
                 Err(e) => RuntimeResult::new().failure(
                     Error::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "HTTP Error",
                         &format!("Failed to read response body: {}", e),
                     )
@@ -313,8 +308,8 @@ pub fn put(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "HTTP Request Failed",
                 &format!("{}", e),
             )
@@ -325,12 +320,12 @@ pub fn put(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn delete(args: Vec<Value>) -> RuntimeResult {
+pub fn delete(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() < 1 || args.len() > 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_delete expects 1-2 arguments (url, headers?)",
             )
@@ -344,8 +339,8 @@ pub fn delete(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -377,8 +372,8 @@ pub fn delete(args: Vec<Value>) -> RuntimeResult {
                 }
                 Err(e) => RuntimeResult::new().failure(
                     Error::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "HTTP Error",
                         &format!("Failed to read response body: {}", e),
                     )
@@ -388,8 +383,8 @@ pub fn delete(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "HTTP Request Failed",
                 &format!("{}", e),
             )
@@ -400,12 +395,12 @@ pub fn delete(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn patch(args: Vec<Value>) -> RuntimeResult {
+pub fn patch(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() < 2 || args.len() > 3 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_patch expects 2-3 arguments (url, body, headers?)",
             )
@@ -419,8 +414,8 @@ pub fn patch(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -431,8 +426,8 @@ pub fn patch(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string or json",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -464,8 +459,8 @@ pub fn patch(args: Vec<Value>) -> RuntimeResult {
                 }
                 Err(e) => RuntimeResult::new().failure(
                     Error::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "HTTP Error",
                         &format!("Failed to read response body: {}", e),
                     )
@@ -475,8 +470,8 @@ pub fn patch(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "HTTP Request Failed",
                 &format!("{}", e),
             )
@@ -487,12 +482,12 @@ pub fn patch(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn set_timeout(args: Vec<Value>) -> RuntimeResult {
+pub fn set_timeout(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_set_timeout expects 1 argument (seconds)",
             )
@@ -506,8 +501,8 @@ pub fn set_timeout(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "number",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -523,12 +518,12 @@ pub fn set_timeout(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::null()))
 }
 
-pub fn set_user_agent(args: Vec<Value>) -> RuntimeResult {
+pub fn set_user_agent(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__http_set_user_agent expects 1 argument (agent)",
             )
@@ -542,8 +537,8 @@ pub fn set_user_agent(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };

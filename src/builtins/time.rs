@@ -8,16 +8,12 @@ use crate::values::{Number, Value};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-pub fn timestamp(args: Vec<Value>) -> RuntimeResult {
+pub fn timestamp(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__time_timestamp expects 0 arguments",
                 None,
             )
@@ -31,8 +27,8 @@ pub fn timestamp(args: Vec<Value>) -> RuntimeResult {
         Err(e) => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     &format!("Time went backwards: {}", e),
                     None,
                 )
@@ -44,12 +40,12 @@ pub fn timestamp(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(since_epoch.as_secs() as f64)))
 }
 
-pub fn timestamp_ms(args: Vec<Value>) -> RuntimeResult {
+pub fn timestamp_ms(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__time_timestamp_ms expects 0 arguments",
                 None,
             )
@@ -63,8 +59,8 @@ pub fn timestamp_ms(args: Vec<Value>) -> RuntimeResult {
         Err(e) => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     &format!("Time went backwards: {}", e),
                     None,
                 )
@@ -76,12 +72,12 @@ pub fn timestamp_ms(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(since_epoch.as_millis() as f64)))
 }
 
-pub fn sleep(args: Vec<Value>) -> RuntimeResult {
+pub fn sleep(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__time_sleep expects 1 argument (milliseconds)",
             )
@@ -95,8 +91,8 @@ pub fn sleep(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "number",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -105,12 +101,12 @@ pub fn sleep(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::null()))
 }
 
-pub fn sleep_sec(args: Vec<Value>) -> RuntimeResult {
+pub fn sleep_sec(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__time_sleep_sec expects 1 argument (seconds)",
                 None,
             )
@@ -123,8 +119,8 @@ pub fn sleep_sec(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__time_sleep_sec: argument must be a number",
                     None,
                 )
@@ -137,12 +133,12 @@ pub fn sleep_sec(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::null()))
 }
 
-pub fn duration_secs(args: Vec<Value>) -> RuntimeResult {
+pub fn duration_secs(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__time_duration_secs expects 2 arguments (start_ms, end_ms)",
                 None,
             )
@@ -155,8 +151,8 @@ pub fn duration_secs(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__time_duration_secs: first argument must be a number",
                     None,
                 )
@@ -170,8 +166,8 @@ pub fn duration_secs(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__time_duration_secs: second argument must be a number",
                     None,
                 )
@@ -184,12 +180,12 @@ pub fn duration_secs(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(duration_secs)))
 }
 
-pub fn duration_ms(args: Vec<Value>) -> RuntimeResult {
+pub fn duration_ms(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__time_duration_ms expects 2 arguments (start_ms, end_ms)",
                 None,
             )
@@ -202,8 +198,8 @@ pub fn duration_ms(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__time_duration_ms: first argument must be a number",
                     None,
                 )
@@ -217,8 +213,8 @@ pub fn duration_ms(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__time_duration_ms: second argument must be a number",
                     None,
                 )

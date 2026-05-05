@@ -642,142 +642,146 @@ impl BuiltInFunction {
         }
     }
 
-    pub fn execute(&self, args: Vec<Value>, interpreter: &mut Interpreter) -> RuntimeResult {
+    pub fn execute(
+        &self,
+        args: Vec<Value>,
+        interpreter: &mut Interpreter,
+        call_pos: Position,
+    ) -> RuntimeResult {
         match self.name.as_str() {
-            "echo" => self.echo(args),
-            "ret" => self.ret(args),
-            "input" => self.input(),
-            "input_int" => self.input_int(),
-            "clear" => self.clear(),
-            "is_num" => self.is_num(args),
-            "is_str" => self.is_str(args),
-            "is_list" => self.is_list(args),
-            "is_fun" => self.is_fun(args),
-            "append" => self.append(args),
-            "pop" => self.pop(args),
-            "extend" => self.extend(args),
-            "len" => self.len(args),
-            "run" => self.run(args, interpreter),
+            "echo" => self.echo(args, call_pos),
+            "ret" => self.ret(args, call_pos),
+            "input" => self.input(call_pos),
+            "input_int" => self.input_int(call_pos),
+            "clear" => self.clear(call_pos),
+            "is_num" => self.is_num(args, call_pos),
+            "is_str" => self.is_str(args, call_pos),
+            "is_list" => self.is_list(args, call_pos),
+            "is_fun" => self.is_fun(args, call_pos),
+            "append" => self.append(args, call_pos),
+            "pop" => self.pop(args, call_pos),
+            "extend" => self.extend(args, call_pos),
+            "len" => self.len(args, call_pos),
+            "run" => self.run(args, interpreter, call_pos),
+            "format" => crate::builtins::format::format(args, interpreter, call_pos),
 
-            "format" => crate::builtins::format::format(args, interpreter),
+            // std::fs
+            "__fs_read" => crate::builtins::fs::read(args, call_pos),
+            "__fs_write" => crate::builtins::fs::write(args, call_pos),
+            "__fs_append" => crate::builtins::fs::append(args, call_pos),
+            "__fs_exists" => crate::builtins::fs::exists(args, call_pos),
+            "__fs_is_file" => crate::builtins::fs::is_file(args, call_pos),
+            "__fs_is_dir" => crate::builtins::fs::is_dir(args, call_pos),
+            "__fs_mkdir" => crate::builtins::fs::mkdir(args, call_pos),
+            "__fs_mkdir_all" => crate::builtins::fs::mkdir_all(args, call_pos),
+            "__fs_remove" => crate::builtins::fs::remove(args, call_pos),
+            "__fs_remove_all" => crate::builtins::fs::remove_all(args, call_pos),
+            "__fs_list_dir" => crate::builtins::fs::list_dir(args, call_pos),
+            "__fs_copy" => crate::builtins::fs::copy(args, call_pos),
 
-            // std::fs  File System
-            "__fs_read" => crate::builtins::fs::read(args),
-            "__fs_write" => crate::builtins::fs::write(args),
-            "__fs_append" => crate::builtins::fs::append(args),
-            "__fs_exists" => crate::builtins::fs::exists(args),
-            "__fs_is_file" => crate::builtins::fs::is_file(args),
-            "__fs_is_dir" => crate::builtins::fs::is_dir(args),
-            "__fs_mkdir" => crate::builtins::fs::mkdir(args),
-            "__fs_mkdir_all" => crate::builtins::fs::mkdir_all(args),
-            "__fs_remove" => crate::builtins::fs::remove(args),
-            "__fs_remove_all" => crate::builtins::fs::remove_all(args),
-            "__fs_list_dir" => crate::builtins::fs::list_dir(args),
-            "__fs_copy" => crate::builtins::fs::copy(args),
+            // std::path
+            "__path_join" => crate::builtins::path::join(args, call_pos),
+            "__path_basename" => crate::builtins::path::basename(args, call_pos),
+            "__path_dirname" => crate::builtins::path::dirname(args, call_pos),
+            "__path_extension" => crate::builtins::path::extension(args, call_pos),
+            "__path_stem" => crate::builtins::path::stem(args, call_pos),
+            "__path_is_absolute" => crate::builtins::path::is_absolute(args, call_pos),
+            "__path_is_relative" => crate::builtins::path::is_relative(args, call_pos),
+            "__path_absolute" => crate::builtins::path::absolute(args, call_pos),
+            "__path_normalize" => crate::builtins::path::normalize(args, call_pos),
+            "__path_components" => crate::builtins::path::components(args, call_pos),
+            "__path_parent" => crate::builtins::path::parent(args, call_pos),
 
-            // std::path  Path
-            "__path_join" => crate::builtins::path::join(args),
-            "__path_basename" => crate::builtins::path::basename(args),
-            "__path_dirname" => crate::builtins::path::dirname(args),
-            "__path_extension" => crate::builtins::path::extension(args),
-            "__path_stem" => crate::builtins::path::stem(args),
-            "__path_is_absolute" => crate::builtins::path::is_absolute(args),
-            "__path_is_relative" => crate::builtins::path::is_relative(args),
-            "__path_absolute" => crate::builtins::path::absolute(args),
-            "__path_normalize" => crate::builtins::path::normalize(args),
-            "__path_components" => crate::builtins::path::components(args),
-            "__path_parent" => crate::builtins::path::parent(args),
+            // std::time
+            "__time_timestamp" => crate::builtins::time::timestamp(args, call_pos),
+            "__time_timestamp_ms" => crate::builtins::time::timestamp_ms(args, call_pos),
+            "__time_sleep" => crate::builtins::time::sleep(args, call_pos),
+            "__time_sleep_sec" => crate::builtins::time::sleep_sec(args, call_pos),
+            "__time_duration_secs" => crate::builtins::time::duration_secs(args, call_pos),
+            "__time_duration_ms" => crate::builtins::time::duration_ms(args, call_pos),
 
-            // std::time  Time
-            "__time_timestamp" => crate::builtins::time::timestamp(args),
-            "__time_timestamp_ms" => crate::builtins::time::timestamp_ms(args),
-            "__time_sleep" => crate::builtins::time::sleep(args),
-            "__time_sleep_sec" => crate::builtins::time::sleep_sec(args),
-            "__time_duration_secs" => crate::builtins::time::duration_secs(args),
-            "__time_duration_ms" => crate::builtins::time::duration_ms(args),
+            // std::math
+            "__math_sqrt" => crate::builtins::math::sqrt(args, call_pos),
+            "__math_pow" => crate::builtins::math::pow(args, call_pos),
+            "__math_sin" => crate::builtins::math::sin(args, call_pos),
+            "__math_cos" => crate::builtins::math::cos(args, call_pos),
+            "__math_tan" => crate::builtins::math::tan(args, call_pos),
+            "__math_asin" => crate::builtins::math::asin(args, call_pos),
+            "__math_acos" => crate::builtins::math::acos(args, call_pos),
+            "__math_atan" => crate::builtins::math::atan(args, call_pos),
+            "__math_atan2" => crate::builtins::math::atan2(args, call_pos),
+            "__math_log" => crate::builtins::math::log(args, call_pos),
+            "__math_log10" => crate::builtins::math::log10(args, call_pos),
+            "__math_abs" => crate::builtins::math::abs(args, call_pos),
+            "__math_min" => crate::builtins::math::min(args, call_pos),
+            "__math_max" => crate::builtins::math::max(args, call_pos),
+            "__math_clamp" => crate::builtins::math::clamp(args, call_pos),
+            "__math_round" => crate::builtins::math::round(args, call_pos),
+            "__math_floor" => crate::builtins::math::floor(args, call_pos),
+            "__math_ceil" => crate::builtins::math::ceil(args, call_pos),
+            "__math_trunc" => crate::builtins::math::trunc(args, call_pos),
+            "__math_fract" => crate::builtins::math::fract(args, call_pos),
+            "__math_radians" => crate::builtins::math::radians(args, call_pos),
+            "__math_degrees" => crate::builtins::math::degrees(args, call_pos),
+            "__math_sum" => crate::builtins::math::sum(args, call_pos),
+            "__math_average" => crate::builtins::math::average(args, call_pos),
 
-            // std::math  Math
-            "__math_sqrt" => crate::builtins::math::sqrt(args),
-            "__math_pow" => crate::builtins::math::pow(args),
-            "__math_sin" => crate::builtins::math::sin(args),
-            "__math_cos" => crate::builtins::math::cos(args),
-            "__math_tan" => crate::builtins::math::tan(args),
-            "__math_asin" => crate::builtins::math::asin(args),
-            "__math_acos" => crate::builtins::math::acos(args),
-            "__math_atan" => crate::builtins::math::atan(args),
-            "__math_atan2" => crate::builtins::math::atan2(args),
-            "__math_log" => crate::builtins::math::log(args),
-            "__math_log10" => crate::builtins::math::log10(args),
-            "__math_abs" => crate::builtins::math::abs(args),
-            "__math_min" => crate::builtins::math::min(args),
-            "__math_max" => crate::builtins::math::max(args),
-            "__math_clamp" => crate::builtins::math::clamp(args),
-            "__math_round" => crate::builtins::math::round(args),
-            "__math_floor" => crate::builtins::math::floor(args),
-            "__math_ceil" => crate::builtins::math::ceil(args),
-            "__math_trunc" => crate::builtins::math::trunc(args),
-            "__math_fract" => crate::builtins::math::fract(args),
-            "__math_radians" => crate::builtins::math::radians(args),
-            "__math_degrees" => crate::builtins::math::degrees(args),
-            "__math_sum" => crate::builtins::math::sum(args),
-            "__math_average" => crate::builtins::math::average(args),
+            // std::string
+            "__string_split" => crate::builtins::string::split(args, call_pos),
+            "__string_join" => crate::builtins::string::join(args, call_pos),
+            "__string_trim" => crate::builtins::string::trim(args, call_pos),
+            "__string_trim_start" => crate::builtins::string::trim_start(args, call_pos),
+            "__string_trim_end" => crate::builtins::string::trim_end(args, call_pos),
+            "__string_replace" => crate::builtins::string::replace(args, call_pos),
+            "__string_contains" => crate::builtins::string::contains(args, call_pos),
+            "__string_starts_with" => crate::builtins::string::starts_with(args, call_pos),
+            "__string_ends_with" => crate::builtins::string::ends_with(args, call_pos),
+            "__string_to_upper" => crate::builtins::string::to_upper(args, call_pos),
+            "__string_to_lower" => crate::builtins::string::to_lower(args, call_pos),
+            "__string_reverse" => crate::builtins::string::reverse(args, call_pos),
 
-            // std::string  String
-            "__string_split" => crate::builtins::string::split(args),
-            "__string_join" => crate::builtins::string::join(args),
-            "__string_trim" => crate::builtins::string::trim(args),
-            "__string_trim_start" => crate::builtins::string::trim_start(args),
-            "__string_trim_end" => crate::builtins::string::trim_end(args),
-            "__string_replace" => crate::builtins::string::replace(args),
-            "__string_contains" => crate::builtins::string::contains(args),
-            "__string_starts_with" => crate::builtins::string::starts_with(args),
-            "__string_ends_with" => crate::builtins::string::ends_with(args),
-            "__string_to_upper" => crate::builtins::string::to_upper(args),
-            "__string_to_lower" => crate::builtins::string::to_lower(args),
-            "__string_reverse" => crate::builtins::string::reverse(args),
+            // random
+            "__rand_int" => crate::builtins::random::rand_int(args, call_pos),
+            "__rand_int_range" => crate::builtins::random::rand_int_range(args, call_pos),
+            "__rand_float" => crate::builtins::random::rand_float(args, call_pos),
+            "__rand_float_range" => crate::builtins::random::rand_float_range(args, call_pos),
+            "__rand_bool" => crate::builtins::random::rand_bool(args, call_pos),
+            "__rand_choice" => crate::builtins::random::choice(args, call_pos),
+            "__rand_shuffle" => crate::builtins::random::shuffle(args, call_pos),
+            "__rand_uuid" => crate::builtins::random::uuid(args, call_pos),
 
-            // srd::rand  Random
-            "__rand_int" => crate::builtins::random::rand_int(args),
-            "__rand_int_range" => crate::builtins::random::rand_int_range(args),
-            "__rand_float" => crate::builtins::random::rand_float(args),
-            "__rand_float_range" => crate::builtins::random::rand_float_range(args),
-            "__rand_bool" => crate::builtins::random::rand_bool(args),
-            "__rand_choice" => crate::builtins::random::choice(args),
-            "__rand_shuffle" => crate::builtins::random::shuffle(args),
-            "__rand_uuid" => crate::builtins::random::uuid(args),
+            // std::json
+            "__json_parse" => crate::builtins::json::parse(args, call_pos),
+            "__json_stringify" => crate::builtins::json::stringify(args, call_pos),
+            "__json_stringify_pretty" => crate::builtins::json::stringify_pretty(args, call_pos),
+            "__json_get" => crate::builtins::json::get(args, call_pos),
+            "__json_set" => crate::builtins::json::set(args, call_pos),
+            "__json_has_key" => crate::builtins::json::has_key(args, call_pos),
+            "__json_from_map" => crate::builtins::json::from_map(args, call_pos),
 
-            // std::json  JSON
-            "__json_parse" => crate::builtins::json::parse(args),
-            "__json_stringify" => crate::builtins::json::stringify(args),
-            "__json_stringify_pretty" => crate::builtins::json::stringify_pretty(args),
-            "__json_get" => crate::builtins::json::get(args),
-            "__json_set" => crate::builtins::json::set(args),
-            "__json_has_key" => crate::builtins::json::has_key(args),
-            "__json_from_map" => crate::builtins::json::from_map(args),
+            // std::dotenv
+            "__dotenv_load" => crate::builtins::dotenv::load(args, call_pos),
+            "__dotenv_load_file" => crate::builtins::dotenv::load_file(args, call_pos),
+            "__dotenv_get" => crate::builtins::dotenv::get(args, call_pos),
+            "__dotenv_get_or_default" => crate::builtins::dotenv::get_or_default(args, call_pos),
+            "__dotenv_has" => crate::builtins::dotenv::has(args, call_pos),
+            "__dotenv_set" => crate::builtins::dotenv::set(args, call_pos),
+            "__dotenv_unset" => crate::builtins::dotenv::unset(args, call_pos),
+            "__dotenv_vars" => crate::builtins::dotenv::vars(args, call_pos),
 
-            // std::dotenv  Dot Env
-            "__dotenv_load" => crate::builtins::dotenv::load(args),
-            "__dotenv_load_file" => crate::builtins::dotenv::load_file(args),
-            "__dotenv_get" => crate::builtins::dotenv::get(args),
-            "__dotenv_get_or_default" => crate::builtins::dotenv::get_or_default(args),
-            "__dotenv_has" => crate::builtins::dotenv::has(args),
-            "__dotenv_set" => crate::builtins::dotenv::set(args),
-            "__dotenv_unset" => crate::builtins::dotenv::unset(args),
-            "__dotenv_vars" => crate::builtins::dotenv::vars(args),
-
-            // std::http  HTTP Client
-            "__http_get" => crate::builtins::http::get(args),
-            "__http_post" => crate::builtins::http::post(args),
-            "__http_put" => crate::builtins::http::put(args),
-            "__http_delete" => crate::builtins::http::delete(args),
-            "__http_patch" => crate::builtins::http::patch(args),
-            "__http_set_timeout" => crate::builtins::http::set_timeout(args),
-            "__http_set_user_agent" => crate::builtins::http::set_user_agent(args),
+            // std::http
+            "__http_get" => crate::builtins::http::get(args, call_pos),
+            "__http_post" => crate::builtins::http::post(args, call_pos),
+            "__http_put" => crate::builtins::http::put(args, call_pos),
+            "__http_delete" => crate::builtins::http::delete(args, call_pos),
+            "__http_patch" => crate::builtins::http::patch(args, call_pos),
+            "__http_set_timeout" => crate::builtins::http::set_timeout(args, call_pos),
+            "__http_set_user_agent" => crate::builtins::http::set_user_agent(args, call_pos),
 
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     &format!("Unknown built-in function: {}", self.name),
                     None,
                 )
@@ -786,7 +790,7 @@ impl BuiltInFunction {
         }
     }
 
-    fn echo(&self, args: Vec<Value>) -> RuntimeResult {
+    fn echo(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         if let Some(arg) = args.first() {
             match arg {
                 Value::Number(n) => print!("{}", n.value),
@@ -813,7 +817,7 @@ impl BuiltInFunction {
         RuntimeResult::new().success(Value::Number(Number::null()))
     }
 
-    fn ret(&self, args: Vec<Value>) -> RuntimeResult {
+    fn ret(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         if let Some(arg) = args.first() {
             RuntimeResult::new().success(Value::String(XenithString::new(value_to_string(arg))))
         } else {
@@ -821,13 +825,13 @@ impl BuiltInFunction {
         }
     }
 
-    fn input(&self) -> RuntimeResult {
+    fn input(&self, _call_pos: Position) -> RuntimeResult {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         RuntimeResult::new().success(Value::String(XenithString::new(input.trim().to_string())))
     }
 
-    fn input_int(&self) -> RuntimeResult {
+    fn input_int(&self, _call_pos: Position) -> RuntimeResult {
         loop {
             let mut input = String::new();
             io::stdin().read_line(&mut input).unwrap();
@@ -838,28 +842,28 @@ impl BuiltInFunction {
         }
     }
 
-    fn clear(&self) -> RuntimeResult {
+    fn clear(&self, _call_pos: Position) -> RuntimeResult {
         print!("\x1B[2J\x1B[1;1H");
         io::stdout().flush().unwrap();
         RuntimeResult::new().success(Value::Number(Number::null()))
     }
 
-    fn is_num(&self, args: Vec<Value>) -> RuntimeResult {
+    fn is_num(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         let result = matches!(args.first(), Some(Value::Number(_)));
         RuntimeResult::new().success(Value::Number(Number::new(if result { 1.0 } else { 0.0 })))
     }
 
-    fn is_str(&self, args: Vec<Value>) -> RuntimeResult {
+    fn is_str(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         let result = matches!(args.first(), Some(Value::String(_)));
         RuntimeResult::new().success(Value::Number(Number::new(if result { 1.0 } else { 0.0 })))
     }
 
-    fn is_list(&self, args: Vec<Value>) -> RuntimeResult {
+    fn is_list(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         let result = matches!(args.first(), Some(Value::List(_)));
         RuntimeResult::new().success(Value::Number(Number::new(if result { 1.0 } else { 0.0 })))
     }
 
-    fn is_fun(&self, args: Vec<Value>) -> RuntimeResult {
+    fn is_fun(&self, args: Vec<Value>, _call_pos: Position) -> RuntimeResult {
         let result = matches!(
             args.first(),
             Some(Value::Function(_)) | Some(Value::BuiltInFunction(_))
@@ -867,12 +871,12 @@ impl BuiltInFunction {
         RuntimeResult::new().success(Value::Number(Number::new(if result { 1.0 } else { 0.0 })))
     }
 
-    fn append(&self, args: Vec<Value>) -> RuntimeResult {
+    fn append(&self, args: Vec<Value>, call_pos: Position) -> RuntimeResult {
         if args.len() != 2 {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     "append expects 2 arguments",
                     None,
                 )
@@ -888,8 +892,8 @@ impl BuiltInFunction {
             }
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     "First argument to append must be a list",
                     None,
                 )
@@ -898,16 +902,10 @@ impl BuiltInFunction {
         }
     }
 
-    fn pop(&self, args: Vec<Value>) -> RuntimeResult {
+    fn pop(&self, args: Vec<Value>, call_pos: Position) -> RuntimeResult {
         if args.len() != 2 {
             return RuntimeResult::new().failure(
-                RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    "pop expects 2 arguments",
-                    None,
-                )
-                .base,
+                RuntimeError::new(call_pos.clone(), call_pos, "pop expects 2 arguments", None).base,
             );
         }
 
@@ -917,8 +915,8 @@ impl BuiltInFunction {
                 if idx_usize >= list.elements.len() {
                     return RuntimeResult::new().failure(
                         RuntimeError::new(
-                            crate::position::Position::new(0, 0, 0, "", ""),
-                            crate::position::Position::new(0, 0, 0, "", ""),
+                            call_pos.clone(),
+                            call_pos,
                             "List index out of bounds",
                             None,
                         )
@@ -931,8 +929,8 @@ impl BuiltInFunction {
             }
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     "pop expects a list and an index",
                     None,
                 )
@@ -941,12 +939,12 @@ impl BuiltInFunction {
         }
     }
 
-    fn extend(&self, args: Vec<Value>) -> RuntimeResult {
+    fn extend(&self, args: Vec<Value>, call_pos: Position) -> RuntimeResult {
         if args.len() != 2 {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     "extend expects 2 arguments",
                     None,
                 )
@@ -961,27 +959,16 @@ impl BuiltInFunction {
                 RuntimeResult::new().success(Value::List(new_list))
             }
             _ => RuntimeResult::new().failure(
-                RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    "extend expects two lists",
-                    None,
-                )
-                .base,
+                RuntimeError::new(call_pos.clone(), call_pos, "extend expects two lists", None)
+                    .base,
             ),
         }
     }
 
-    fn len(&self, args: Vec<Value>) -> RuntimeResult {
+    fn len(&self, args: Vec<Value>, call_pos: Position) -> RuntimeResult {
         if args.len() != 1 {
             return RuntimeResult::new().failure(
-                RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    "len expects 1 argument",
-                    None,
-                )
-                .base,
+                RuntimeError::new(call_pos.clone(), call_pos, "len expects 1 argument", None).base,
             );
         }
 
@@ -994,8 +981,8 @@ impl BuiltInFunction {
             }
             _ => RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     "len expects a list or string",
                     None,
                 )
@@ -1004,16 +991,15 @@ impl BuiltInFunction {
         }
     }
 
-    fn run(&self, args: Vec<Value>, interpreter: &mut Interpreter) -> RuntimeResult {
+    fn run(
+        &self,
+        args: Vec<Value>,
+        interpreter: &mut Interpreter,
+        call_pos: Position,
+    ) -> RuntimeResult {
         if args.len() != 1 {
             return RuntimeResult::new().failure(
-                RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    "run expects 1 argument",
-                    None,
-                )
-                .base,
+                RuntimeError::new(call_pos.clone(), call_pos, "run expects 1 argument", None).base,
             );
         }
 
@@ -1022,8 +1008,8 @@ impl BuiltInFunction {
             _ => {
                 return RuntimeResult::new().failure(
                     RuntimeError::new(
-                        crate::position::Position::new(0, 0, 0, "", ""),
-                        crate::position::Position::new(0, 0, 0, "", ""),
+                        call_pos.clone(),
+                        call_pos,
                         "run expects a string filename",
                         None,
                     )
@@ -1039,8 +1025,8 @@ impl BuiltInFunction {
             },
             Err(e) => RuntimeResult::new().failure(
                 RuntimeError::new(
-                    crate::position::Position::new(0, 0, 0, "", ""),
-                    crate::position::Position::new(0, 0, 0, "", ""),
+                    call_pos.clone(),
+                    call_pos,
                     &format!("Failed to load script \"{}\": {}", filename, e),
                     None,
                 )
@@ -1129,6 +1115,32 @@ impl Default for Map {
 #[derive(Debug, Clone)]
 pub struct CaughtError {
     pub message: String,
+    pub error: Option<Box<Error>>,
+}
+
+impl CaughtError {
+    pub fn from_error(error: Error) -> Self {
+        let message = format!("{}: {}", error.error_name, error.details);
+        Self {
+            message,
+            error: Some(Box::new(error)),
+        }
+    }
+
+    pub fn from_message(message: String) -> Self {
+        Self {
+            message,
+            error: None,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        if let Some(error) = &self.error {
+            error.as_string()
+        } else {
+            self.message.clone()
+        }
+    }
 }
 
 /// Struct instance

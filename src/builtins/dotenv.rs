@@ -11,16 +11,12 @@ use std::sync::Mutex;
 
 static ENV_VARS: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-pub fn load(args: Vec<Value>) -> RuntimeResult {
+pub fn load(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_load expects 0 arguments",
                 None,
             )
@@ -29,8 +25,7 @@ pub fn load(args: Vec<Value>) -> RuntimeResult {
     }
 
     match dotenv::dotenv() {
-        Ok(path) => {
-            // Reload into our cache
+        Ok(_path) => {
             let vars = std::env::vars().collect();
             let mut cache = ENV_VARS.lock().unwrap();
             *cache = vars;
@@ -38,8 +33,8 @@ pub fn load(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 &format!("Failed to load .env: {}", e),
                 None,
             )
@@ -48,12 +43,12 @@ pub fn load(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn load_file(args: Vec<Value>) -> RuntimeResult {
+pub fn load_file(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_load_file expects 1 argument (path)",
                 None,
             )
@@ -66,8 +61,8 @@ pub fn load_file(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_load_file: argument must be a string",
                     None,
                 )
@@ -85,8 +80,8 @@ pub fn load_file(args: Vec<Value>) -> RuntimeResult {
         }
         Err(e) => RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 &format!("Failed to load .env file '{}': {}", path, e),
                 None,
             )
@@ -95,12 +90,12 @@ pub fn load_file(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn get(args: Vec<Value>) -> RuntimeResult {
+pub fn get(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__dotenv_get expects 1 argument (key)",
             )
@@ -114,8 +109,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -125,16 +120,16 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
         Some(value) => {
             RuntimeResult::new().success(Value::String(XenithString::new(value.clone())))
         }
-        None => RuntimeResult::new().failure(Error::env_not_found(key, dummy_pos(), dummy_pos())),
+        None => RuntimeResult::new().failure(Error::env_not_found(key, call_pos.clone(), call_pos)),
     }
 }
 
-pub fn get_or_default(args: Vec<Value>) -> RuntimeResult {
+pub fn get_or_default(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_get_or_default expects 2 arguments (key, default)",
                 None,
             )
@@ -147,8 +142,8 @@ pub fn get_or_default(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_get_or_default: first argument must be a string",
                     None,
                 )
@@ -162,8 +157,8 @@ pub fn get_or_default(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_get_or_default: second argument must be a string",
                     None,
                 )
@@ -181,12 +176,12 @@ pub fn get_or_default(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn has(args: Vec<Value>) -> RuntimeResult {
+pub fn has(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_has expects 1 argument (key)",
                 None,
             )
@@ -199,8 +194,8 @@ pub fn has(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_has: argument must be a string",
                     None,
                 )
@@ -213,12 +208,12 @@ pub fn has(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(cache.contains_key(key)))
 }
 
-pub fn set(args: Vec<Value>) -> RuntimeResult {
+pub fn set(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_set expects 2 arguments (key, value)",
                 None,
             )
@@ -231,8 +226,8 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_set: first argument must be a string",
                     None,
                 )
@@ -246,8 +241,8 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_set: second argument must be a string",
                     None,
                 )
@@ -264,12 +259,12 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::null()))
 }
 
-pub fn unset(args: Vec<Value>) -> RuntimeResult {
+pub fn unset(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_unset expects 1 argument (key)",
                 None,
             )
@@ -282,8 +277,8 @@ pub fn unset(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__dotenv_unset: argument must be a string",
                     None,
                 )
@@ -300,12 +295,12 @@ pub fn unset(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::null()))
 }
 
-pub fn vars(args: Vec<Value>) -> RuntimeResult {
+pub fn vars(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__dotenv_vars expects 0 arguments",
                 None,
             )

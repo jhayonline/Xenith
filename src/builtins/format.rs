@@ -8,16 +8,16 @@ use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
 use crate::values::{Value, XenithString};
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-pub fn format(args: Vec<Value>, interpreter: &mut Interpreter) -> RuntimeResult {
+pub fn format(
+    args: Vec<Value>,
+    interpreter: &mut Interpreter,
+    call_pos: Position,
+) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "format expects 1 argument (string)",
                 None,
             )
@@ -75,8 +75,8 @@ pub fn format(args: Vec<Value>, interpreter: &mut Interpreter) -> RuntimeResult 
         }
         _ => RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "format expects a string argument",
                 None,
             )

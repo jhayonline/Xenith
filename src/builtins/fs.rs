@@ -8,16 +8,12 @@ use crate::values::{List, Number, Value, XenithString};
 use std::fs;
 use std::path::Path;
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-pub fn read(args: Vec<Value>) -> RuntimeResult {
+pub fn read(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_read expects 1 argument (path)",
             )
@@ -31,8 +27,8 @@ pub fn read(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -40,17 +36,17 @@ pub fn read(args: Vec<Value>) -> RuntimeResult {
     match fs::read_to_string(path) {
         Ok(content) => RuntimeResult::new().success(Value::String(XenithString::new(content))),
         Err(_) => {
-            RuntimeResult::new().failure(Error::file_not_found(path, dummy_pos(), dummy_pos()))
+            RuntimeResult::new().failure(Error::file_not_found(path, call_pos.clone(), call_pos))
         }
     }
 }
 
-pub fn write(args: Vec<Value>) -> RuntimeResult {
+pub fn write(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_write expects 2 arguments (path, content)",
             )
@@ -64,8 +60,8 @@ pub fn write(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -76,8 +72,8 @@ pub fn write(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -85,17 +81,17 @@ pub fn write(args: Vec<Value>) -> RuntimeResult {
     match fs::write(path, content) {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn append(args: Vec<Value>) -> RuntimeResult {
+pub fn append(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_append expects 2 arguments (path, content)",
             )
@@ -109,8 +105,8 @@ pub fn append(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -121,8 +117,8 @@ pub fn append(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -133,23 +129,23 @@ pub fn append(args: Vec<Value>) -> RuntimeResult {
             match file.write_all(content.as_bytes()) {
                 Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
                 Err(e) => RuntimeResult::new().failure(
-                    Error::permission_denied(path, dummy_pos(), dummy_pos())
+                    Error::permission_denied(path, call_pos.clone(), call_pos)
                         .with_note(&e.to_string()),
                 ),
             }
         }
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn exists(args: Vec<Value>) -> RuntimeResult {
+pub fn exists(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_exists expects 1 argument (path)",
             )
@@ -163,8 +159,8 @@ pub fn exists(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -173,12 +169,12 @@ pub fn exists(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(exists))
 }
 
-pub fn is_file(args: Vec<Value>) -> RuntimeResult {
+pub fn is_file(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_is_file expects 1 argument (path)",
             )
@@ -192,8 +188,8 @@ pub fn is_file(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -202,12 +198,12 @@ pub fn is_file(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(is_file))
 }
 
-pub fn is_dir(args: Vec<Value>) -> RuntimeResult {
+pub fn is_dir(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_is_dir expects 1 argument (path)",
             )
@@ -221,8 +217,8 @@ pub fn is_dir(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -231,12 +227,12 @@ pub fn is_dir(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(is_dir))
 }
 
-pub fn mkdir(args: Vec<Value>) -> RuntimeResult {
+pub fn mkdir(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_mkdir expects 1 argument (path)",
             )
@@ -250,8 +246,8 @@ pub fn mkdir(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -259,17 +255,17 @@ pub fn mkdir(args: Vec<Value>) -> RuntimeResult {
     match fs::create_dir(path) {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn mkdir_all(args: Vec<Value>) -> RuntimeResult {
+pub fn mkdir_all(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_mkdir_all expects 1 argument (path)",
             )
@@ -283,8 +279,8 @@ pub fn mkdir_all(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -292,17 +288,17 @@ pub fn mkdir_all(args: Vec<Value>) -> RuntimeResult {
     match fs::create_dir_all(path) {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn remove(args: Vec<Value>) -> RuntimeResult {
+pub fn remove(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_remove expects 1 argument (path)",
             )
@@ -316,8 +312,8 @@ pub fn remove(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -326,7 +322,7 @@ pub fn remove(args: Vec<Value>) -> RuntimeResult {
         Ok(m) => m,
         Err(e) => {
             return RuntimeResult::new().failure(
-                Error::file_not_found(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+                Error::file_not_found(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
             );
         }
     };
@@ -340,17 +336,17 @@ pub fn remove(args: Vec<Value>) -> RuntimeResult {
     match result {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn remove_all(args: Vec<Value>) -> RuntimeResult {
+pub fn remove_all(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_remove_all expects 1 argument (path)",
             )
@@ -364,8 +360,8 @@ pub fn remove_all(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -373,17 +369,17 @@ pub fn remove_all(args: Vec<Value>) -> RuntimeResult {
     match fs::remove_dir_all(path) {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::permission_denied(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::permission_denied(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn list_dir(args: Vec<Value>) -> RuntimeResult {
+pub fn list_dir(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_list_dir expects 1 argument (path)",
             )
@@ -397,8 +393,8 @@ pub fn list_dir(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -415,7 +411,7 @@ pub fn list_dir(args: Vec<Value>) -> RuntimeResult {
                     }
                     Err(e) => {
                         return RuntimeResult::new().failure(
-                            Error::permission_denied(path, dummy_pos(), dummy_pos())
+                            Error::permission_denied(path, call_pos.clone(), call_pos)
                                 .with_note(&e.to_string()),
                         );
                     }
@@ -424,17 +420,17 @@ pub fn list_dir(args: Vec<Value>) -> RuntimeResult {
             RuntimeResult::new().success(Value::List(List::new(items)))
         }
         Err(e) => RuntimeResult::new().failure(
-            Error::file_not_found(path, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::file_not_found(path, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }
 
-pub fn copy(args: Vec<Value>) -> RuntimeResult {
+pub fn copy(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__fs_copy expects 2 arguments (from, to)",
             )
@@ -448,8 +444,8 @@ pub fn copy(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -460,8 +456,8 @@ pub fn copy(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "string",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -469,7 +465,7 @@ pub fn copy(args: Vec<Value>) -> RuntimeResult {
     match fs::copy(from, to) {
         Ok(_) => RuntimeResult::new().success(Value::Number(Number::null())),
         Err(e) => RuntimeResult::new().failure(
-            Error::file_not_found(from, dummy_pos(), dummy_pos()).with_note(&e.to_string()),
+            Error::file_not_found(from, call_pos.clone(), call_pos).with_note(&e.to_string()),
         ),
     }
 }

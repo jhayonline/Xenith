@@ -8,15 +8,10 @@ use crate::runtime_result::RuntimeResult;
 use crate::values::{List, Map, Number, Value, XenithString};
 use std::collections::HashMap;
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
 // Convert Xenith Value to Json
-fn value_to_json(value: &Value) -> Result<Json, Error> {
+fn value_to_json(value: &Value, call_pos: Position) -> Result<Json, Error> {
     match value {
         Value::Number(n) => {
-            // Check if this represents null (value 0.0)
             if n.value == 0.0 {
                 Ok(Json::Null)
             } else {
@@ -28,14 +23,14 @@ fn value_to_json(value: &Value) -> Result<Json, Error> {
         Value::List(l) => {
             let mut arr = Vec::new();
             for elem in &l.elements {
-                arr.push(value_to_json(elem)?);
+                arr.push(value_to_json(elem, call_pos.clone())?);
             }
             Ok(Json::Array(arr))
         }
         Value::Map(m) => {
             let mut obj = HashMap::new();
             for (k, v) in &m.pairs {
-                obj.insert(k.clone(), value_to_json(v)?);
+                obj.insert(k.clone(), value_to_json(v, call_pos.clone())?);
             }
             Ok(Json::Object(obj))
         }
@@ -43,8 +38,8 @@ fn value_to_json(value: &Value) -> Result<Json, Error> {
         _ => Err(Error::invalid_conversion(
             "value",
             "json",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
@@ -70,12 +65,12 @@ fn json_to_value(json: &Json) -> Value {
     }
 }
 
-pub fn parse(args: Vec<Value>) -> RuntimeResult {
+pub fn parse(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__json_parse expects 1 argument",
             )
@@ -90,32 +85,32 @@ pub fn parse(args: Vec<Value>) -> RuntimeResult {
                 Err(e) => {
                     return RuntimeResult::new().failure(Error::invalid_json(
                         &e.to_string(),
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                     ));
                 }
             };
             RuntimeResult::new().success(Value::Json(Json::from(json_val)))
         }
-        Value::Map(m) => match value_to_json(&Value::Map(m.clone())) {
+        Value::Map(m) => match value_to_json(&Value::Map(m.clone()), call_pos.clone()) {
             Ok(json_val) => RuntimeResult::new().success(Value::Json(json_val)),
             Err(e) => RuntimeResult::new().failure(e),
         },
         _ => RuntimeResult::new().failure(Error::type_mismatch(
             "string or map",
             "other",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
 
-pub fn stringify(args: Vec<Value>) -> RuntimeResult {
+pub fn stringify(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_stringify expects 1 argument",
                 None,
             )
@@ -125,7 +120,7 @@ pub fn stringify(args: Vec<Value>) -> RuntimeResult {
 
     let json_val = match &args[0] {
         Value::Json(j) => j.clone(),
-        other => match value_to_json(other) {
+        other => match value_to_json(other, call_pos.clone()) {
             Ok(j) => j,
             Err(e) => return RuntimeResult::new().failure(e),
         },
@@ -134,12 +129,12 @@ pub fn stringify(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(json_val.to_string())))
 }
 
-pub fn stringify_pretty(args: Vec<Value>) -> RuntimeResult {
+pub fn stringify_pretty(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_stringify_pretty expects 1 argument",
                 None,
             )
@@ -149,7 +144,7 @@ pub fn stringify_pretty(args: Vec<Value>) -> RuntimeResult {
 
     let json_val = match &args[0] {
         Value::Json(j) => j.clone(),
-        other => match value_to_json(other) {
+        other => match value_to_json(other, call_pos.clone()) {
             Ok(j) => j,
             Err(e) => return RuntimeResult::new().failure(e),
         },
@@ -160,12 +155,12 @@ pub fn stringify_pretty(args: Vec<Value>) -> RuntimeResult {
     )))
 }
 
-pub fn from_map(args: Vec<Value>) -> RuntimeResult {
+pub fn from_map(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__json_from_map expects 1 argument (map)",
             )
@@ -174,25 +169,25 @@ pub fn from_map(args: Vec<Value>) -> RuntimeResult {
     }
 
     match &args[0] {
-        Value::Map(m) => match value_to_json(&Value::Map(m.clone())) {
+        Value::Map(m) => match value_to_json(&Value::Map(m.clone()), call_pos.clone()) {
             Ok(json_val) => RuntimeResult::new().success(Value::Json(json_val)),
             Err(e) => RuntimeResult::new().failure(e),
         },
         _ => RuntimeResult::new().failure(Error::type_mismatch(
             "map",
             "other",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
 
-pub fn get(args: Vec<Value>) -> RuntimeResult {
+pub fn get(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 3 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_get expects 3 arguments (json, key, default)",
                 None,
             )
@@ -205,8 +200,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_get: first argument must be json",
                     None,
                 )
@@ -220,8 +215,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_get: second argument must be a string",
                     None,
                 )
@@ -240,8 +235,8 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
         }
         _ => RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_get: cannot get key from non-object json",
                 None,
             )
@@ -250,12 +245,12 @@ pub fn get(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn set(args: Vec<Value>) -> RuntimeResult {
+pub fn set(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 3 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_set expects 3 arguments (json, key, value)",
                 None,
             )
@@ -268,8 +263,8 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_set: first argument must be json",
                     None,
                 )
@@ -283,8 +278,8 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_set: second argument must be a string",
                     None,
                 )
@@ -293,7 +288,7 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         }
     };
 
-    let value = match value_to_json(&args[2]) {
+    let value = match value_to_json(&args[2], call_pos.clone()) {
         Ok(v) => v,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -305,8 +300,8 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
         }
         _ => RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_set: cannot set key on non-object json",
                 None,
             )
@@ -315,12 +310,12 @@ pub fn set(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn has_key(args: Vec<Value>) -> RuntimeResult {
+pub fn has_key(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__json_has_key expects 2 arguments (json, key)",
                 None,
             )
@@ -333,8 +328,8 @@ pub fn has_key(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_has_key: first argument must be json",
                     None,
                 )
@@ -348,8 +343,8 @@ pub fn has_key(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__json_has_key: second argument must be a string",
                     None,
                 )

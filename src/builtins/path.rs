@@ -7,23 +7,19 @@ use crate::runtime_result::RuntimeResult;
 use crate::values::{List, Value, XenithString};
 use std::path::{Path, PathBuf};
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-fn value_to_string(value: &Value) -> Result<String, Error> {
+fn value_to_string(value: &Value, call_pos: Position) -> Result<String, Error> {
     match value {
         Value::String(s) => Ok(s.value.clone()),
         _ => Err(Error::type_mismatch(
             "string",
             "other",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
 
-fn value_to_string_list(value: &Value) -> Result<Vec<String>, Error> {
+fn value_to_string_list(value: &Value, call_pos: Position) -> Result<Vec<String>, Error> {
     match value {
         Value::List(list) => {
             let mut strings = Vec::new();
@@ -34,8 +30,8 @@ fn value_to_string_list(value: &Value) -> Result<Vec<String>, Error> {
                         return Err(Error::type_mismatch(
                             "list of strings",
                             "other",
-                            dummy_pos(),
-                            dummy_pos(),
+                            call_pos.clone(),
+                            call_pos,
                         ));
                     }
                 }
@@ -45,18 +41,18 @@ fn value_to_string_list(value: &Value) -> Result<Vec<String>, Error> {
         _ => Err(Error::type_mismatch(
             "list",
             "other",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
 
-pub fn join(args: Vec<Value>) -> RuntimeResult {
+pub fn join(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__path_join expects 1 argument (list of parts)",
             )
@@ -64,7 +60,7 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let parts = match value_to_string_list(&args[0]) {
+    let parts = match value_to_string_list(&args[0], call_pos.clone()) {
         Ok(p) => p,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -83,12 +79,12 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
     )))
 }
 
-pub fn basename(args: Vec<Value>) -> RuntimeResult {
+pub fn basename(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_basename expects 1 argument (path)",
                 None,
             )
@@ -96,7 +92,7 @@ pub fn basename(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -107,12 +103,12 @@ pub fn basename(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(basename.to_string())))
 }
 
-pub fn dirname(args: Vec<Value>) -> RuntimeResult {
+pub fn dirname(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_dirname expects 1 argument (path)",
                 None,
             )
@@ -120,7 +116,7 @@ pub fn dirname(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -131,12 +127,12 @@ pub fn dirname(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(dirname.to_string())))
 }
 
-pub fn extension(args: Vec<Value>) -> RuntimeResult {
+pub fn extension(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_extension expects 1 argument (path)",
                 None,
             )
@@ -144,7 +140,7 @@ pub fn extension(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -155,12 +151,12 @@ pub fn extension(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(extension.to_string())))
 }
 
-pub fn stem(args: Vec<Value>) -> RuntimeResult {
+pub fn stem(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_stem expects 1 argument (path)",
                 None,
             )
@@ -168,7 +164,7 @@ pub fn stem(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -179,12 +175,12 @@ pub fn stem(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(stem.to_string())))
 }
 
-pub fn is_absolute(args: Vec<Value>) -> RuntimeResult {
+pub fn is_absolute(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_is_absolute expects 1 argument (path)",
                 None,
             )
@@ -192,7 +188,7 @@ pub fn is_absolute(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -201,12 +197,12 @@ pub fn is_absolute(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(path.is_absolute()))
 }
 
-pub fn is_relative(args: Vec<Value>) -> RuntimeResult {
+pub fn is_relative(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_is_relative expects 1 argument (path)",
                 None,
             )
@@ -214,7 +210,7 @@ pub fn is_relative(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -223,12 +219,12 @@ pub fn is_relative(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(path.is_relative()))
 }
 
-pub fn absolute(args: Vec<Value>) -> RuntimeResult {
+pub fn absolute(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__path_absolute expects 1 argument (path)",
             )
@@ -236,7 +232,7 @@ pub fn absolute(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -248,8 +244,8 @@ pub fn absolute(args: Vec<Value>) -> RuntimeResult {
         ))),
         Err(e) => RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Path Error",
                 &format!("Failed to get absolute path: {}", e),
             )
@@ -260,12 +256,12 @@ pub fn absolute(args: Vec<Value>) -> RuntimeResult {
     }
 }
 
-pub fn normalize(args: Vec<Value>) -> RuntimeResult {
+pub fn normalize(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_normalize expects 1 argument (path)",
                 None,
             )
@@ -273,7 +269,7 @@ pub fn normalize(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -307,12 +303,12 @@ pub fn normalize(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(result)))
 }
 
-pub fn components(args: Vec<Value>) -> RuntimeResult {
+pub fn components(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_components expects 1 argument (path)",
                 None,
             )
@@ -320,7 +316,7 @@ pub fn components(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -338,12 +334,12 @@ pub fn components(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::List(List::new(components)))
 }
 
-pub fn parent(args: Vec<Value>) -> RuntimeResult {
+pub fn parent(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__path_parent expects 1 argument (path)",
                 None,
             )
@@ -351,7 +347,7 @@ pub fn parent(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let path_str = match value_to_string(&args[0]) {
+    let path_str = match value_to_string(&args[0], call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };

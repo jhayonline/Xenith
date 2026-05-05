@@ -1433,11 +1433,8 @@ impl Interpreter {
 
         // Check if there was a runtime error
         if let Some(error) = try_result.error {
-            // Create caught error value
-            let error_message = format!("{}: {}", error.error_name, error.details);
-            let caught_error = CaughtError {
-                message: error_message,
-            };
+            // Create caught error with full error info
+            let caught_error = CaughtError::from_error(error);
 
             // Execute catch block with error variable
             let mut catch_context = context.create_child("<catch>", node.position_start.clone());
@@ -1462,12 +1459,11 @@ impl Interpreter {
         }
 
         let message = value_to_string(&message_value);
-        let caught_error = CaughtError { message };
+        let caught_error = CaughtError::from_message(message);
 
-        // Return with caught error and also mark that we should return
         let mut panic_result = RuntimeResult::new();
         panic_result.caught_error = Some(caught_error);
-        panic_result // Don't call success_catch, just return the error
+        panic_result
     }
 
     fn visit_interpolated_string(
@@ -2082,7 +2078,7 @@ impl Interpreter {
                                 {
                                     context
                                         .symbol_table
-                                        .set_existing(var_name, updated_self.clone()); // &self
+                                        .set_existing(var_name, updated_self.clone());
                                 }
                             }
                         }
@@ -2173,7 +2169,10 @@ impl Interpreter {
             Value::Function(func) => {
                 func.execute(args, context.clone(), self, node.position_start.clone())
             }
-            Value::BuiltInFunction(builtin) => builtin.execute(args, self),
+            Value::BuiltInFunction(builtin) => {
+                // Pass the call position!
+                builtin.execute(args, self, node.position_start.clone())
+            }
             _ => {
                 return result.failure(
                     RuntimeError::new(

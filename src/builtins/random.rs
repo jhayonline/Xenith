@@ -12,16 +12,12 @@ thread_local! {
     static RNG: RefCell<rand::rngs::ThreadRng> = RefCell::new(rand::rngs::ThreadRng::default());
 }
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-pub fn rand_int(args: Vec<Value>) -> RuntimeResult {
+pub fn rand_int(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_int expects 0 arguments",
                 None,
             )
@@ -37,12 +33,12 @@ pub fn rand_int(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(value as f64)))
 }
 
-pub fn rand_float(args: Vec<Value>) -> RuntimeResult {
+pub fn rand_float(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_float expects 0 arguments",
                 None,
             )
@@ -58,12 +54,12 @@ pub fn rand_float(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(value)))
 }
 
-pub fn rand_float_range(args: Vec<Value>) -> RuntimeResult {
+pub fn rand_float_range(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_float_range expects 2 arguments (min, max)",
                 None,
             )
@@ -76,8 +72,8 @@ pub fn rand_float_range(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__rand_float_range: min must be a number",
                     None,
                 )
@@ -91,8 +87,8 @@ pub fn rand_float_range(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__rand_float_range: max must be a number",
                     None,
                 )
@@ -104,8 +100,8 @@ pub fn rand_float_range(args: Vec<Value>) -> RuntimeResult {
     if min >= max {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_float_range: min must be less than max",
                 None,
             )
@@ -121,12 +117,12 @@ pub fn rand_float_range(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(value)))
 }
 
-pub fn rand_bool(args: Vec<Value>) -> RuntimeResult {
+pub fn rand_bool(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_bool expects 0 arguments",
                 None,
             )
@@ -142,12 +138,12 @@ pub fn rand_bool(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(value))
 }
 
-pub fn rand_int_range(args: Vec<Value>) -> RuntimeResult {
+pub fn rand_int_range(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__rand_int_range expects 2 arguments (min, max)",
             )
@@ -161,8 +157,8 @@ pub fn rand_int_range(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "number",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -173,8 +169,8 @@ pub fn rand_int_range(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "number",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -182,8 +178,8 @@ pub fn rand_int_range(args: Vec<Value>) -> RuntimeResult {
     if min >= max {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Invalid Range",
                 "min must be less than max",
             )
@@ -201,12 +197,12 @@ pub fn rand_int_range(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Number(Number::new(value as f64)))
 }
 
-pub fn choice(args: Vec<Value>) -> RuntimeResult {
+pub fn choice(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Argument Error",
                 "__rand_choice expects 1 argument (list)",
             )
@@ -220,8 +216,8 @@ pub fn choice(args: Vec<Value>) -> RuntimeResult {
             return RuntimeResult::new().failure(Error::type_mismatch(
                 "list",
                 "other",
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
             ));
         }
     };
@@ -229,8 +225,8 @@ pub fn choice(args: Vec<Value>) -> RuntimeResult {
     if list.elements.is_empty() {
         return RuntimeResult::new().failure(
             Error::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "Empty List",
                 "cannot choose from empty list",
             )
@@ -248,12 +244,12 @@ pub fn choice(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(list.elements[index].clone())
 }
 
-pub fn shuffle(args: Vec<Value>) -> RuntimeResult {
+pub fn shuffle(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_shuffle expects 1 argument (list)",
                 None,
             )
@@ -266,8 +262,8 @@ pub fn shuffle(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__rand_shuffle: argument must be a list",
                     None,
                 )
@@ -290,12 +286,12 @@ pub fn shuffle(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::List(List::new(elements)))
 }
 
-pub fn uuid(args: Vec<Value>) -> RuntimeResult {
+pub fn uuid(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 0 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__rand_uuid expects 0 arguments",
                 None,
             )

@@ -6,28 +6,24 @@ use crate::position::Position;
 use crate::runtime_result::RuntimeResult;
 use crate::values::{List, Value, XenithString};
 
-fn dummy_pos() -> Position {
-    Position::new(0, 0, 0, "", "")
-}
-
-fn get_string_arg(args: &[Value], index: usize) -> Result<String, Error> {
+fn get_string_arg(args: &[Value], index: usize, call_pos: Position) -> Result<String, Error> {
     match &args[index] {
         Value::String(s) => Ok(s.value.clone()),
         _ => Err(Error::type_mismatch(
             "string",
             "other",
-            dummy_pos(),
-            dummy_pos(),
+            call_pos.clone(),
+            call_pos,
         )),
     }
 }
 
-pub fn split(args: Vec<Value>) -> RuntimeResult {
+pub fn split(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_split expects 2 arguments (text, delimiter)",
                 None,
             )
@@ -35,12 +31,12 @@ pub fn split(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let delimiter = match get_string_arg(&args, 1) {
+    let delimiter = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -58,12 +54,12 @@ pub fn split(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::List(List::new(parts)))
 }
 
-pub fn join(args: Vec<Value>) -> RuntimeResult {
+pub fn join(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_join expects 2 arguments (list, separator)",
                 None,
             )
@@ -76,8 +72,8 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
         _ => {
             return RuntimeResult::new().failure(
                 RuntimeError::new(
-                    dummy_pos(),
-                    dummy_pos(),
+                    call_pos.clone(),
+                    call_pos,
                     "__string_join: first argument must be a list of strings",
                     None,
                 )
@@ -86,7 +82,7 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
         }
     };
 
-    let separator = match get_string_arg(&args, 1) {
+    let separator = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -103,8 +99,8 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
             _ => {
                 return RuntimeResult::new().failure(
                     RuntimeError::new(
-                        dummy_pos(),
-                        dummy_pos(),
+                        call_pos.clone(),
+                        call_pos,
                         "__string_join: list must contain only strings",
                         None,
                     )
@@ -117,12 +113,12 @@ pub fn join(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(result)))
 }
 
-pub fn trim(args: Vec<Value>) -> RuntimeResult {
+pub fn trim(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_trim expects 1 argument (text)",
                 None,
             )
@@ -130,7 +126,7 @@ pub fn trim(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -138,12 +134,12 @@ pub fn trim(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(text.trim().to_string())))
 }
 
-pub fn trim_start(args: Vec<Value>) -> RuntimeResult {
+pub fn trim_start(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_trim_start expects 1 argument (text)",
                 None,
             )
@@ -151,7 +147,7 @@ pub fn trim_start(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -161,12 +157,12 @@ pub fn trim_start(args: Vec<Value>) -> RuntimeResult {
     )))
 }
 
-pub fn trim_end(args: Vec<Value>) -> RuntimeResult {
+pub fn trim_end(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_trim_end expects 1 argument (text)",
                 None,
             )
@@ -174,7 +170,7 @@ pub fn trim_end(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -184,12 +180,12 @@ pub fn trim_end(args: Vec<Value>) -> RuntimeResult {
     )))
 }
 
-pub fn replace(args: Vec<Value>) -> RuntimeResult {
+pub fn replace(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 3 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_replace expects 3 arguments (text, from, to)",
                 None,
             )
@@ -197,17 +193,17 @@ pub fn replace(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let from = match get_string_arg(&args, 1) {
+    let from = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let to = match get_string_arg(&args, 2) {
+    let to = match get_string_arg(&args, 2, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -215,12 +211,12 @@ pub fn replace(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(text.replace(&from, &to))))
 }
 
-pub fn contains(args: Vec<Value>) -> RuntimeResult {
+pub fn contains(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_contains expects 2 arguments (text, substring)",
                 None,
             )
@@ -228,12 +224,12 @@ pub fn contains(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let substring = match get_string_arg(&args, 1) {
+    let substring = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -241,12 +237,12 @@ pub fn contains(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(text.contains(&substring)))
 }
 
-pub fn starts_with(args: Vec<Value>) -> RuntimeResult {
+pub fn starts_with(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_starts_with expects 2 arguments (text, prefix)",
                 None,
             )
@@ -254,12 +250,12 @@ pub fn starts_with(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let prefix = match get_string_arg(&args, 1) {
+    let prefix = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -267,12 +263,12 @@ pub fn starts_with(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(text.starts_with(&prefix)))
 }
 
-pub fn ends_with(args: Vec<Value>) -> RuntimeResult {
+pub fn ends_with(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 2 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_ends_with expects 2 arguments (text, suffix)",
                 None,
             )
@@ -280,12 +276,12 @@ pub fn ends_with(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
 
-    let suffix = match get_string_arg(&args, 1) {
+    let suffix = match get_string_arg(&args, 1, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -293,12 +289,12 @@ pub fn ends_with(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::Bool(text.ends_with(&suffix)))
 }
 
-pub fn to_upper(args: Vec<Value>) -> RuntimeResult {
+pub fn to_upper(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_to_upper expects 1 argument (text)",
                 None,
             )
@@ -306,7 +302,7 @@ pub fn to_upper(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -314,12 +310,12 @@ pub fn to_upper(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(text.to_uppercase())))
 }
 
-pub fn to_lower(args: Vec<Value>) -> RuntimeResult {
+pub fn to_lower(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_to_lower expects 1 argument (text)",
                 None,
             )
@@ -327,7 +323,7 @@ pub fn to_lower(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
@@ -335,12 +331,12 @@ pub fn to_lower(args: Vec<Value>) -> RuntimeResult {
     RuntimeResult::new().success(Value::String(XenithString::new(text.to_lowercase())))
 }
 
-pub fn reverse(args: Vec<Value>) -> RuntimeResult {
+pub fn reverse(args: Vec<Value>, call_pos: Position) -> RuntimeResult {
     if args.len() != 1 {
         return RuntimeResult::new().failure(
             RuntimeError::new(
-                dummy_pos(),
-                dummy_pos(),
+                call_pos.clone(),
+                call_pos,
                 "__string_reverse expects 1 argument (text)",
                 None,
             )
@@ -348,7 +344,7 @@ pub fn reverse(args: Vec<Value>) -> RuntimeResult {
         );
     }
 
-    let text = match get_string_arg(&args, 0) {
+    let text = match get_string_arg(&args, 0, call_pos.clone()) {
         Ok(s) => s,
         Err(e) => return RuntimeResult::new().failure(e),
     };
