@@ -540,16 +540,25 @@ impl Lexer {
 
         self.advance(); // Skip opening quote
 
-        let escape_map: HashMap<char, char> =
-            HashMap::from([('n', '\n'), ('t', '\t'), ('{', '{'), ('}', '}')]);
+        let escape_map: HashMap<char, char> = HashMap::from([
+            ('n', '\n'),
+            ('t', '\t'),
+            ('r', '\r'),
+            ('\\', '\\'),
+            ('"', '"'),
+            ('\'', '\''),
+            ('{', '{'),
+            ('}', '}'),
+        ]);
 
         while let Some(c) = self.current_character {
+            // Check for closing quote (not escaped)
             if c == '"' && !escape_char {
                 break;
             }
 
+            // Handle double-brace escapes (for literal braces)
             if !escape_char && c == '{' && self.peek() == Some('{') {
-                // Escaped double brace - add single brace
                 self.advance(); // skip second {
                 string_val.push('{');
                 self.advance();
@@ -557,17 +566,15 @@ impl Lexer {
             }
 
             if !escape_char && c == '}' && self.peek() == Some('}') {
-                // Escaped double brace - add single brace
                 self.advance(); // skip second }
                 string_val.push('}');
                 self.advance();
                 continue;
             }
 
+            // Handle interpolation start
             if !escape_char && c == '{' {
-                // Start of interpolation
                 is_interpolated = true;
-                // Clone the string_val before pushing
                 interpolation_parts.push(("text".to_string(), string_val.clone()));
                 string_val.clear();
 
@@ -600,6 +607,7 @@ impl Lexer {
                 continue;
             }
 
+            // Handle escape sequences
             if escape_char {
                 let escaped = escape_map.get(&c).copied().unwrap_or(c);
                 string_val.push(escaped);
@@ -635,7 +643,7 @@ impl Lexer {
                 Some(self.position.clone()),
             )
         } else {
-            // For regular strings, just use string_val directly (not moved yet)
+            // For regular strings, just use string_val
             Token::new(
                 TokenType::String,
                 Some(string_val),

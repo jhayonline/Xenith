@@ -1,0 +1,85 @@
+# Test string escape sequences
+echo("=== Testing String Escapes ===\n")
+
+# Double quotes inside strings
+let with_quotes: string = "She said \"Hello!\""
+echo("With quotes: {with_quotes}")
+
+# Newlines
+let with_newline: string = "Line1\nLine2"
+echo("With newline: {with_newline}")
+
+# Tabs
+let with_tab: string = "Col1\tCol2\tCol3"
+echo("With tab: {with_tab}")
+
+# Backslashes
+let with_backslash: string = "Path: C:\\Users\\Name\\file.txt"
+echo("With backslash: {with_backslash}")
+
+# Carriage return
+let with_cr: string = "Text\rOverwritten"
+echo("With CR: {with_cr}")
+
+# Mixed escapes
+let mixed: string = "Name:\t\"Alice\"\nAge:\t25\n"
+echo("Mixed:\n{mixed}")
+
+# Interpolation with escapes (should still work)
+let name: string = "Alice"
+let greeting: string = "Hello {name}!\nWelcome to Xenith"
+echo("{greeting}")
+
+# Literal braces (escaped with double braces)
+let with_braces: string = "This {{is}} a literal brace"
+echo("Literal braces: {with_braces}")
+
+# Backtick vs double quote comparison
+let raw_path: string = `C:\Users\Name\file.txt`
+let escaped_path: string = "C:\\Users\\Name\\file.txt"
+echo("\nRaw path: {raw_path}")
+echo("Escaped path: {escaped_path}")
+
+echo("\n=== All escape tests completed! ===")# Test string escape sequences
+echo("=== Testing String Escapes ===\n")
+
+# Double quotes inside strings
+let with_quotes: string = "She said \"Hello!\""
+echo("With quotes: {with_quotes}")
+
+# Newlines
+let with_newline: string = "Line1\nLine2"
+echo("With newline: {with_newline}")
+
+# Tabs
+let with_tab: string = "Col1\tCol2\tCol3"
+echo("With tab: {with_tab}")
+
+# Backslashes
+let with_backslash: string = "Path: C:\\Users\\Name\\file.txt"
+echo("With backslash: {with_backslash}")
+
+# Carriage return
+let with_cr: string = "Text\rOverwritten"
+echo("With CR: {with_cr}")
+
+# Mixed escapes
+let mixed: string = "Name:\t\"Alice\"\nAge:\t25\n"
+echo("Mixed:\n{mixed}")
+
+# Interpolation with escapes (should still work)
+let name: string = "Alice"
+let greeting: string = "Hello {name}!\nWelcome to Xenith"
+echo("{greeting}")
+
+# Literal braces (escaped with double braces)
+let with_braces: string = "This {{is}} a literal brace"
+echo("Literal braces: {with_braces}")
+
+# Backtick vs double quote comparison
+let raw_path: string = `C:\Users\Name\file.txt`
+let escaped_path: string = "C:\\Users\\Name\\file.txt"
+echo("\nRaw path: {raw_path}")
+echo("Escaped path: {escaped_path}")
+
+echo("\n=== All escape tests completed! ===")
