@@ -72,6 +72,10 @@ impl Interpreter {
             Value::BuiltInFunction(BuiltInFunction::new("echo")),
         );
         global.set(
+            "format".to_string(),
+            Value::BuiltInFunction(BuiltInFunction::new("format")),
+        );
+        global.set(
             "ret".to_string(),
             Value::BuiltInFunction(BuiltInFunction::new("ret")),
         );

@@ -1,0 +1,29 @@
+# Test backtick strings
+echo("=== Testing Backtick Strings ===\n")
+
+# Basic backtick string
+let path: string = `C:\Program Files\MyApp`
+echo("Path: {path}")
+
+# Backtick with quotes inside
+let json_string: string = `{"name": "Alice", "age": 25}`
+echo("JSON: {json_string}")
+
+# Backtick with format for interpolation
+let name: string = "Alice"
+let greeting: string = format(`Hello {name}!`)
+echo("Greeting: {greeting}")
+
+# Multi-line backtick with format
+let table: string = "users"
+let query: string = format(`
+    SELECT * FROM {table}
+    WHERE active = true
+    ORDER BY name
+`)
+echo("Query: {query}")
+
+# Direct format output
+format(`This prints directly!`)
+
+echo("\n=== All tests completed! ===")

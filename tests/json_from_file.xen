@@ -1,5 +1,5 @@
 # Test JSON by reading from file
-grab { parse, stringify } from "std::json"  # Add stringify here
+grab { parse, stringify } from "std::json"  
 grab { read } from "std::fs"
 
 echo("=== JSON Test from File ===\n")

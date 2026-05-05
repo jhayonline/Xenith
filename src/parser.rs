@@ -3099,6 +3099,17 @@ impl Parser {
                     self.advance();
                     return result.success(node);
                 }
+                TokenType::BacktickString => {
+                    let value = tok.value.clone().unwrap();
+                    let node = Node::String(StringNode::new(Token::new(
+                        TokenType::String,
+                        Some(value),
+                        tok.position_start.clone(),
+                        Some(tok.position_end.clone()),
+                    )));
+                    self.advance();
+                    return result.success(node);
+                }
                 TokenType::BoolTrue => {
                     let node = Node::BoolLiteral(BoolLiteralNode {
                         value: true,

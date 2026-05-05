@@ -362,6 +362,9 @@ impl Lexer {
                         ));
                         self.advance();
                     }
+                    '`' => {
+                        tokens.push(self.make_backtick_string());
+                    }
                     '_' => {
                         tokens.push(Token::new(
                             TokenType::Underscore,
@@ -393,6 +396,29 @@ impl Lexer {
         ));
 
         Ok(tokens)
+    }
+
+    fn make_backtick_string(&mut self) -> Token {
+        let mut string_val = String::new();
+        let pos_start = self.position.copy();
+
+        self.advance(); // Skip opening backtick
+
+        while let Some(c) = self.current_character {
+            if c == '`' {
+                self.advance(); // Skip closing backtick
+                break;
+            }
+            string_val.push(c);
+            self.advance();
+        }
+
+        Token::new(
+            TokenType::BacktickString,
+            Some(string_val),
+            pos_start,
+            Some(self.position.clone()),
+        )
     }
 
     /// Looks at the next character without advancing

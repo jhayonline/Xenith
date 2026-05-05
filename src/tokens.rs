@@ -69,6 +69,7 @@ pub enum TokenType {
     Eof,
     Match,
     Underscore,
+    BacktickString,
 }
 
 /// A token representing a lexical unit

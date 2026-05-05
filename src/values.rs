@@ -659,6 +659,8 @@ impl BuiltInFunction {
             "len" => self.len(args),
             "run" => self.run(args, interpreter),
 
+            "format" => crate::builtins::format::format(args, interpreter),
+
             // std::fs  File System
             "__fs_read" => crate::builtins::fs::read(args),
             "__fs_write" => crate::builtins::fs::write(args),

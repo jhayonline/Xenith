@@ -1,4 +1,5 @@
 pub mod dotenv;
+pub mod format;
 pub mod fs;
 pub mod http;
 pub mod json;
